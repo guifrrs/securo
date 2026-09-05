@@ -869,6 +869,7 @@ async def get_portfolio_trend(
             "name": asset.name,
             "type": asset.type,
             "group_id": str(asset.group_id) if asset.group_id else None,
+            "first_date": None,
         })
         asset_currency[aid] = asset.currency
 
@@ -900,6 +901,10 @@ async def get_portfolio_trend(
         value_lookup[aid] = dict(values_map[aid])
         if values_map[aid]:
             first_date[aid] = values_map[aid][0][0]
+
+    for meta in asset_meta:
+        start = first_date.get(meta["id"])
+        meta["first_date"] = start.isoformat() if start is not None else None
 
     # Build trend with fill-forward; 0 before first date (for stacking).
     # Each native-currency amount is converted at the display date `d` so that

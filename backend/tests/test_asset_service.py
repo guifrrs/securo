@@ -929,6 +929,12 @@ async def test_portfolio_trend_with_assets(session: AsyncSession, test_user: Use
     assert len(result["trend"]) > 0
     assert result["total"] > 0
 
+    starts = {asset["name"]: asset["first_date"] for asset in result["assets"]}
+    assert starts == {
+        "House": a1.purchase_date.isoformat(),
+        "Car": a2.purchase_date.isoformat(),
+    }
+
 
 @pytest.mark.asyncio
 async def test_portfolio_trend_total_consistent_with_get_asset_values_at(
