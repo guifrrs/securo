@@ -26,6 +26,7 @@ from app.providers.market_price import (
 )
 from app.schemas.asset import (
     AssetCreate,
+    AssetUpdate,
     MarketSymbolMatch,
     MarketSymbolQuote,
 )
@@ -98,6 +99,38 @@ def _quote(symbol: str, price: float, currency: str = "USD") -> MarketSymbolQuot
         price=price,
         quote_type="EQUITY",
     )
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("price_fields", [{}, {"purchase_price": None}, {"purchase_price": 999}])
+async def test_edit_market_asset_preserves_cost_basis(
+    session: AsyncSession, test_user: User, test_workspace, price_fields
+):
+    created = await asset_service.create_asset(
+        session, test_workspace.id, test_user.id,
+        AssetCreate(
+            name="Apple", type="investment", valuation_method="market_price",
+            ticker="AAPL", units=Decimal("10"), unit_price=Decimal("150"),
+        ),
+        market_provider=FakeMarketProvider({"AAPL": _quote("AAPL", 180)}),
+    )
+    updated = await asset_service.update_asset(
+        session, created.id, test_workspace.id, test_user.id,
+        AssetUpdate(name="Renamed Apple", **price_fields),
+    )
+    assert updated is not None
+    assert updated.name == "Renamed Apple"
+    assert updated.purchase_price == 1500
+    assert updated.total_invested == 1500
+    assert updated.average_price == 150
+    assert updated.gain_loss == 300
+    assert updated.last_price == 180
+
+    # Verify the persisted result as well as the mutation response.
+    saved = await asset_service.get_asset(session, created.id, test_workspace.id)
+    assert saved is not None
+    assert saved.total_invested == 1500
+    assert saved.gain_loss == 300
 
 
 @pytest.mark.asyncio

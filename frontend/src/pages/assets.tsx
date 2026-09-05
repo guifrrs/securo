@@ -634,12 +634,14 @@ export default function AssetsPage() {
       group_id: formGroupId || null,
       valuation_method: formMethod,
       purchase_date: formPurchaseDate || null,
-      // Tickers have no total purchase price — the cost basis is derived from
-      // the unit-price buy (and then the ledger). Only manual/growth assets
-      // carry a total purchase price.
-      purchase_price: isMarket ? null : (formPurchasePrice ? parseFloat(formPurchasePrice) : null),
       sell_date: isMarket ? null : (formSellDate || null),
       sell_price: isMarket ? null : (formSellPrice ? parseFloat(formSellPrice) : null),
+    }
+
+    // Market holdings derive their cost basis from transactions. Omitting the
+    // field preserves it on edit; sending null would clear the saved cost.
+    if (!isMarket) {
+      payload.purchase_price = formPurchasePrice ? parseFloat(formPurchasePrice) : null
     }
 
     if (formMethod === 'growth_rule') {
