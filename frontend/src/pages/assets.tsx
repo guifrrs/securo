@@ -1697,7 +1697,7 @@ export default function AssetsPage() {
 const PORTFOLIO_COLORS = ['#6366F1', '#F43F5E', '#F59E0B', '#10B981', '#8B5CF6', '#EC4899', '#06B6D4', '#84CC16']
 
 function PortfolioChart({ data, wallets, currency, locale: loc, dateLocale: dateLoc, mask }: {
-  data: { assets: { id: string; name: string; type: string; group_id: string | null }[]; trend: Record<string, unknown>[]; total: number }
+  data: { assets: { id: string; name: string; type: string; group_id: string | null; first_date: string | null }[]; trend: Record<string, unknown>[]; total: number }
   wallets: AssetGroup[]
   currency: string
   locale: string
@@ -1806,13 +1806,25 @@ function PortfolioChart({ data, wallets, currency, locale: loc, dateLocale: date
   }, [series, displayTrend])
   const selectedSeries = sortedSeries.find(s => s.key === selectedSeriesKey)
   const visibleSeries = selectedSeries ? [selectedSeries] : sortedSeries
-  const visibleTrend = useMemo(() => selectedSeries
-    ? displayTrend.map(row => ({
+  const visibleTrend = useMemo(() => {
+    if (!selectedSeries) return displayTrend
+
+    const startDates = data.assets
+      .filter(asset => selectedSeries.sourceAssetIds.includes(asset.id))
+      .map(asset => asset.first_date)
+      .filter((date): date is string => date != null)
+      .sort()
+    const firstDate = startDates[0]
+    if (!firstDate) return []
+
+    return displayTrend
+      .filter(row => (row.date as string) >= firstDate)
+      .map(row => ({
         date: row.date,
         [selectedSeries.key]: row[selectedSeries.key] ?? 0,
         _total: row[selectedSeries.key] ?? 0,
       }))
-    : displayTrend, [displayTrend, selectedSeries])
+  }, [data.assets, displayTrend, selectedSeries])
   const visibleTotal = selectedSeries
     ? Number(visibleTrend[visibleTrend.length - 1]?._total ?? 0)
     : data.total
