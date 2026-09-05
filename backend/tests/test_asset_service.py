@@ -911,14 +911,16 @@ async def test_portfolio_trend_empty(session: AsyncSession, test_user: User, tes
 
 @pytest.mark.asyncio
 async def test_portfolio_trend_with_assets(session: AsyncSession, test_user: User, test_workspace):
+    house_purchase_date = date(2023, 9, 1)
+    car_purchase_date = date(2023, 10, 1)
     a1 = AssetCreate(
         name="House", type="real_estate", currency="BRL",
-        purchase_date=date.today() - timedelta(days=30),
+        purchase_date=house_purchase_date,
         purchase_price=Decimal("300000"), current_value=Decimal("350000"),
     )
     a2 = AssetCreate(
         name="Car", type="vehicle", currency="BRL",
-        purchase_date=date.today() - timedelta(days=10),
+        purchase_date=car_purchase_date,
         purchase_price=Decimal("50000"), current_value=Decimal("45000"),
     )
     await asset_service.create_asset(session, test_workspace.id, test_user.id, a1)
@@ -931,8 +933,8 @@ async def test_portfolio_trend_with_assets(session: AsyncSession, test_user: Use
 
     starts = {asset["name"]: asset["first_date"] for asset in result["assets"]}
     assert starts == {
-        "House": a1.purchase_date.isoformat(),
-        "Car": a2.purchase_date.isoformat(),
+        "House": house_purchase_date.isoformat(),
+        "Car": car_purchase_date.isoformat(),
     }
 
 
