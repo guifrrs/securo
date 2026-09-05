@@ -862,16 +862,19 @@ async def test_update_asset_regenerate_growth(session: AsyncSession, test_user: 
 
 
 @pytest.mark.asyncio
-async def test_update_asset_purchase_price(session: AsyncSession, test_user: User, test_workspace):
+@pytest.mark.parametrize("purchase_price", [Decimal("2000"), None])
+async def test_update_asset_purchase_price(
+    session: AsyncSession, test_user: User, test_workspace, purchase_price
+):
     data = AssetCreate(
         name="Price Update", type="other", currency="BRL",
         purchase_price=Decimal("1000"),
     )
     created = await asset_service.create_asset(session, test_workspace.id, test_user.id, data)
-    update_data = AssetUpdate(purchase_price=Decimal("2000"))
+    update_data = AssetUpdate(purchase_price=purchase_price)
     updated = await asset_service.update_asset(session, created.id, test_workspace.id, test_user.id, update_data)
     assert updated is not None
-    assert updated.purchase_price == 2000.0
+    assert updated.purchase_price == (float(purchase_price) if purchase_price is not None else None)
 
 
 @pytest.mark.asyncio

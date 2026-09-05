@@ -638,6 +638,10 @@ async def update_asset(
     update_data = data.model_dump(exclude_unset=True)
     # Prevent changing valuation_method on existing assets
     update_data.pop("valuation_method", None)
+    # Market holdings derive their cost basis from the transaction ledger.
+    # Metadata edits must not overwrite it, including older clients sending null.
+    if asset.valuation_method == "market_price":
+        update_data.pop("purchase_price", None)
     for key, value in update_data.items():
         setattr(asset, key, value)
 
