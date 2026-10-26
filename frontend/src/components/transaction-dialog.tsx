@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { getAccountLabel, getAccountName, sortAccountsByDisplayName } from '@/lib/account-utils'
 import { useTranslation } from 'react-i18next'
+import { Link } from 'react-router-dom'
 import { useDateLocale, useDisplayLocale } from '@/hooks/use-display-locale'
 import { formatAmountInput, formatCurrency, parseAmountInput } from '@/lib/format'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -14,6 +15,7 @@ import { flattenConditions, hasConditionGroups } from '@/lib/rule-conditions'
 import { cn, normalizeText } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { DescriptionInput } from '@/components/description-input'
 import { Label } from '@/components/ui/label'
 import { DatePickerInput } from '@/components/ui/date-picker-input'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
@@ -34,6 +36,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { CategorySelect } from '@/components/category-select'
+import { PayeeSelect } from '@/components/payee-select'
 import { RuleDialog, type RuleDialogInitialData } from '@/components/rule-dialog'
 import { TransactionAttachments } from '@/components/transaction-attachments'
 import type { AttachmentPreview } from '@/components/transaction-attachments'
@@ -107,13 +110,14 @@ export function TransactionDialog({
   isSynced = false,
   duplicateDraft = null,
   formResetKey = 0,
+  defaultAccountId,
 }: {
   open: boolean
   onClose: () => void
   transaction: Transaction | null
   categories: Category[]
   categoryGroups: CategoryGroup[]
-  accounts: { id: string; name: string; display_name?: string | null; type?: string }[]
+  accounts: { id: string; name: string; display_name?: string | null; type?: string; currency?: string }[]
   recurringMatch?: RecurringTransaction
   onSave: (data: TransactionSavePayload, recurringData?: { frequency: string; end_date?: string }, installmentData?: InstallmentSeriesInput, pendingFiles?: File[], action?: SaveAction) => void
   onDelete?: () => void
@@ -125,6 +129,8 @@ export function TransactionDialog({
   isSynced?: boolean
   duplicateDraft?: TransactionEditPayload | null
   formResetKey?: number
+  /** Account preselected when creating a new transaction. */
+  defaultAccountId?: string
 }) {
   const { t } = useTranslation()
   const [preview, setPreview] = useState<AttachmentPreview | null>(null)
@@ -215,6 +221,7 @@ export function TransactionDialog({
               key={transaction?.id ?? `new-${formResetKey}`}
               transaction={transaction}
               duplicateDraft={duplicateDraft}
+              defaultAccountId={defaultAccountId}
               categories={categories}
               categoryGroups={categoryGroups}
               accounts={accounts}
@@ -265,7 +272,7 @@ export function TransactionDialog({
                     type="button"
                     className="p-1 rounded hover:bg-accent text-muted-foreground hover:text-foreground cursor-pointer"
                     onClick={() => handlePreviewChange(null)}
-                    title="Close preview"
+                    title={t('common.closePreview')}
                   >
                     <ChevronLeft size={16} />
                   </button>
@@ -274,7 +281,7 @@ export function TransactionDialog({
                     type="button"
                     className="p-1 rounded hover:bg-accent text-muted-foreground hover:text-foreground cursor-pointer"
                     onClick={handleDownloadPreview}
-                    title="Download"
+                    title={t('common.download')}
                   >
                     <Download size={14} />
                   </button>
@@ -309,7 +316,7 @@ export function TransactionDialog({
                 type="button"
                 className="p-1 rounded hover:bg-accent text-muted-foreground hover:text-foreground cursor-pointer"
                 onClick={() => handlePreviewChange(null)}
-                title="Close preview"
+                title={t('common.closePreview')}
               >
                 <ChevronLeft size={18} />
               </button>
@@ -318,7 +325,7 @@ export function TransactionDialog({
                 type="button"
                 className="p-1 rounded hover:bg-accent text-muted-foreground hover:text-foreground cursor-pointer"
                 onClick={handleDownloadPreview}
-                title="Download"
+                title={t('common.download')}
               >
                 <Download size={16} />
               </button>
@@ -376,6 +383,7 @@ export function TransactionDialog({
 function TransactionForm({
   transaction,
   duplicateDraft,
+  defaultAccountId,
   categories,
   categoryGroups,
   accounts,
@@ -395,9 +403,10 @@ function TransactionForm({
 }: {
   transaction: Transaction | null
   duplicateDraft: TransactionEditPayload | null
+  defaultAccountId?: string
   categories: Category[]
   categoryGroups: CategoryGroup[]
-  accounts: { id: string; name: string; display_name?: string | null; type?: string }[]
+  accounts: { id: string; name: string; display_name?: string | null; type?: string; currency?: string }[]
   recurringMatch?: RecurringTransaction
   onSave: (data: TransactionEditPayload, recurringData?: { frequency: string; end_date?: string }, installmentData?: InstallmentSeriesInput, pendingFiles?: File[], action?: SaveAction) => void
   onDelete?: () => void
@@ -441,10 +450,15 @@ function TransactionForm({
   const [date, setDate] = useState(seed?.date ?? localDateString())
   const [type, setType] = useState<'debit' | 'credit'>(seed?.type ?? 'debit')
   const [status, setStatus] = useState<'posted' | 'pending'>(seed?.status ?? 'posted')
-  const [currency, setCurrency] = useState(seed?.currency ?? userCurrency)
+  // Opened from an account page, start in that account's currency.
+  const [currency, setCurrency] = useState(
+    seed?.currency
+      ?? (defaultAccountId ? accounts.find(a => a.id === defaultAccountId)?.currency : undefined)
+      ?? userCurrency
+  )
   const [categoryId, setCategoryId] = useState(seed?.category_id ?? '')
   const [payeeId, setPayeeId] = useState(seed?.payee_id ?? '')
-  const [accountId, setAccountId] = useState(seed?.account_id ?? sortedAccounts[0]?.id ?? '')
+  const [accountId, setAccountId] = useState(seed?.account_id ?? defaultAccountId ?? '')
   const [notes, setNotes] = useState(seed?.notes ?? '')
   // Manual CC bucketing override (issue #92). Empty = auto. Visible only
   // when the selected account is a credit card.
@@ -508,8 +522,8 @@ function TransactionForm({
   const formRef = useRef<HTMLFormElement>(null)
   const descriptionRef = useRef<HTMLTextAreaElement>(null)
 
-  // Bank-synced descriptions are read-only and can be long; auto-grow the
-  // textarea so the full text is always visible (issue #256).
+  // Bank-synced descriptions can be long; auto-grow the textarea so the full
+  // text is always visible (issue #256).
   useEffect(() => {
     const el = descriptionRef.current
     if (!el) return
@@ -527,6 +541,9 @@ function TransactionForm({
   const [unlinkingRecurring, setUnlinkingRecurring] = useState(false)
   const [addToRuleOpen, setAddToRuleOpen] = useState(false)
   const [extendRuleTarget, setExtendRuleTarget] = useState<Rule | null>(null)
+  // Unlinking re-reports the other leg, so the pair link is removed only
+  // after an explicit confirmation (issue #1160).
+  const [unlinkConfirmOpen, setUnlinkConfirmOpen] = useState(false)
 
   const { data: rulesList, isLoading: rulesLoading } = useQuery({
     queryKey: ['rules'],
@@ -644,7 +661,14 @@ function TransactionForm({
 
   const triggerSubmit = (action: SaveAction) => {
     pendingActionRef.current = action
-    formRef.current?.requestSubmit()
+    try {
+      // The submit handler runs synchronously inside requestSubmit() and reads
+      // the action first. If validation blocks the submit, the handler never
+      // runs, so reset here or a later plain Save would reuse this action.
+      formRef.current?.requestSubmit()
+    } finally {
+      pendingActionRef.current = 'save'
+    }
   }
   const showSaveVariants = isCreating && !isSynced
 
@@ -791,6 +815,7 @@ function TransactionForm({
           : {}
         const txData = isSynced
           ? {
+              ...(description !== transaction?.description ? { description } : {}),
               category_id: categoryId || null,
               payee_id: payeeId || null,
               notes: notes.trim() || null,
@@ -821,13 +846,13 @@ function TransactionForm({
         const recurringData = isCreating && isRecurring
           ? { frequency, end_date: endDate || undefined }
           : undefined
-        const installmentData = isCreating && isInstallment && !isSynced
+        const installmentData = isCreating && isInstallment && !isSynced && parsedAmount != null
           ? buildInstallmentSeriesInput({
               accountId,
               categoryId,
               payeeId,
               description,
-              amount,
+              amount: parsedAmount,
               date,
               type,
               currency,
@@ -870,7 +895,20 @@ function TransactionForm({
                 return (
                   <p className="text-xs text-blue-600 dark:text-blue-300 truncate">
                     <span className="font-medium">{t('transactions.transferLinkedTo')}</span>{' '}
-                    {pairAccount ? getAccountName(pairAccount) : '—'}
+                    {pairAccount ? (
+                      <Link
+                        to={`/accounts/${pairAccount.id}`}
+                        onClick={(e) => {
+                          // A modified click opens a new tab; keep the dialog and its edits.
+                          if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return
+                          onCancel()
+                        }}
+                        title={t('transactions.transferOpenAccount', { account: getAccountName(pairAccount) })}
+                        className="underline underline-offset-2 hover:text-blue-800 dark:hover:text-blue-100"
+                      >
+                        {getAccountName(pairAccount)}
+                      </Link>
+                    ) : '—'}
                     {' · '}
                     {new Date(transferPair.date + 'T00:00:00').toLocaleDateString(dateLocale)}
                     {' · '}
@@ -886,20 +924,46 @@ function TransactionForm({
               <p className="text-xs text-blue-500 dark:text-blue-400">{t('transactions.transferTooltip')}</p>
             </div>
             {onUnlinkTransfer && transaction?.transfer_pair_id && (
-              <button
-                type="button"
-                disabled={loading}
-                onClick={() => {
-                  if (transaction?.transfer_pair_id) {
-                    onUnlinkTransfer(transaction.transfer_pair_id)
-                  }
-                }}
-                className="shrink-0 inline-flex items-center gap-1.5 rounded-md border border-blue-200 dark:border-blue-800 bg-white/60 dark:bg-blue-900/40 px-2.5 py-1.5 text-xs font-medium text-blue-700 dark:text-blue-200 hover:bg-white dark:hover:bg-blue-900/70 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                title={t('transactions.unlinkTransferConfirm')}
-              >
-                <Unlink size={12} />
-                {t('transactions.unlinkTransfer')}
-              </button>
+              <>
+                <button
+                  type="button"
+                  disabled={loading}
+                  onClick={() => setUnlinkConfirmOpen(true)}
+                  className="shrink-0 inline-flex items-center gap-1.5 rounded-md border border-blue-200 dark:border-blue-800 bg-white/60 dark:bg-blue-900/40 px-2.5 py-1.5 text-xs font-medium text-blue-700 dark:text-blue-200 hover:bg-white dark:hover:bg-blue-900/70 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  <Unlink size={12} />
+                  {t('transactions.unlinkTransfer')}
+                </button>
+                {/* Confirms the unlink: dropping the pair link re-reports the
+                    other leg, which changes reported totals (issue #1160). */}
+                <Dialog open={unlinkConfirmOpen} onOpenChange={setUnlinkConfirmOpen}>
+                  <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                      <DialogTitle>{t('transactions.unlinkTransfer')}</DialogTitle>
+                      <DialogDescription>
+                        {t('transactions.unlinkTransferConfirm')}
+                      </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                      <Button type="button" variant="outline" onClick={() => setUnlinkConfirmOpen(false)}>
+                        {t('common.cancel')}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        onClick={() => {
+                          setUnlinkConfirmOpen(false)
+                          if (transaction?.transfer_pair_id) {
+                            onUnlinkTransfer(transaction.transfer_pair_id)
+                          }
+                        }}
+                      >
+                        {t('transactions.unlinkTransfer')}
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+              </>
             )}
           </div>
         </div>
@@ -908,7 +972,7 @@ function TransactionForm({
         <div className="flex items-center gap-2 p-3 text-sm bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-md">
           <span>{t('transactions.recurringInfo', {
             frequency: t(`recurring.${recurringMatch.frequency}`),
-            next: new Date(recurringMatch.next_occurrence).toLocaleDateString(dateLocale),
+            next: new Date(recurringMatch.next_occurrence + 'T00:00:00').toLocaleDateString(dateLocale),
           })}</span>
         </div>
       )}
@@ -933,24 +997,47 @@ function TransactionForm({
         {isSynced ? (
           <textarea
             ref={descriptionRef}
-            className="w-full border border-input rounded-md px-3 py-2 text-sm bg-muted/40 text-muted-foreground resize-none overflow-hidden cursor-default outline-none focus:outline-none focus-visible:outline-none"
+            className="w-full border border-input rounded-md px-3 py-2 text-sm bg-card dark:bg-input/30 shadow-xs resize-none overflow-hidden outline-none transition-[color,box-shadow] focus-visible:border-ring focus-visible:ring-ring/30 focus-visible:ring-[2px]"
             value={description}
-            readOnly
+            onChange={(e) => setDescription(e.target.value)}
+            // Descriptions are single-line; Enter saves like the Input does.
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
+                e.preventDefault()
+                formRef.current?.requestSubmit()
+              }
+            }}
+            required
             rows={1}
           />
         ) : (
-          <Input
+          <DescriptionInput
             value={description}
-            onChange={(e) => setDescription(e.target.value)}
+            onChange={setDescription}
+            // Prefill what was last filed under this description, without
+            // overwriting anything the user already chose (issue #1127).
+            onPick={(suggestion) => {
+              if (!categoryId && suggestion.category_id) setCategoryId(suggestion.category_id)
+              if (!payeeId && suggestion.payee_id) setPayeeId(suggestion.payee_id)
+            }}
             required
             className="bg-card"
           />
         )}
         {transaction?.original_description &&
-          transaction.original_description !== transaction.description && (
-            <p className="text-xs text-muted-foreground">
-              {t('transactions.originalDescription')}: {transaction.original_description}
-            </p>
+          transaction.original_description !== description && (
+            <div className="flex items-start justify-between gap-3 text-xs text-muted-foreground">
+              <p>
+                {t('transactions.originalDescription')}: {transaction.original_description}
+              </p>
+              <button
+                type="button"
+                onClick={() => setDescription(transaction.original_description ?? '')}
+                className="shrink-0 underline underline-offset-2 hover:text-foreground transition-colors cursor-pointer"
+              >
+                {t('transactions.restoreOriginalDescription')}
+              </button>
+            </div>
           )}
         {/* Rows that pre-date the original_description column have no
             provenance to show, so the raw payee stays the only hint at what
@@ -1102,6 +1189,7 @@ function TransactionForm({
             groups={displayCategoryGroups}
             currentCategory={seed?.category}
             allowNone={true}
+            creatable
             className="bg-card"
           />
         </div>
@@ -1109,16 +1197,12 @@ function TransactionForm({
       <div className={cn("grid gap-4", isSynced ? "grid-cols-1" : "grid-cols-2")}>
         <div className="space-y-2">
           <Label>{t('payees.payee')}</Label>
-          <select
-            className="w-full border border-border rounded-md px-3 py-2 text-sm bg-card focus:outline-none focus-visible:ring-ring/30 focus-visible:ring-[2px]"
+          <PayeeSelect
             value={payeeId}
-            onChange={(e) => setPayeeId(e.target.value)}
-          >
-            <option value="">{t('payees.noPayee')}</option>
-            {(payeesList ?? []).map((p) => (
-              <option key={p.id} value={p.id}>{p.name}</option>
-            ))}
-          </select>
+            onChange={setPayeeId}
+            payees={payeesList ?? []}
+            creatable
+          />
           {isSynced && transaction?.payee && (
             <p className="text-xs text-muted-foreground">{t('payees.rawPayee')}: {transaction.payee}</p>
           )}
@@ -1132,6 +1216,7 @@ function TransactionForm({
               onChange={(e) => setAccountId(e.target.value)}
               required
             >
+              {!accountId && <option value="" disabled hidden>{t('transactions.createCounterpartSelectAccount')}</option>}
               {sortedAccounts.map((acc) => (
                 <option key={acc.id} value={acc.id}>{getAccountLabel(acc)}</option>
               ))}

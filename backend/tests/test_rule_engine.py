@@ -678,3 +678,115 @@ def test_flat_conditions_still_evaluate_unchanged():
     ]
     assert evaluate_conditions("and", conditions, make_tx(description="UBER TRIP")) is True
     assert evaluate_conditions("or", conditions, make_tx(description="IFOOD")) is True
+
+
+# --- status condition ---
+
+
+def test_status_equals_pending_matches_only_pending():
+    conditions = [{"field": "status", "op": "equals", "value": "pending"}]
+    assert evaluate_conditions("and", conditions, make_tx(status="pending")) is True
+    assert evaluate_conditions("and", conditions, make_tx(status="posted")) is False
+
+
+def test_status_not_equals_posted_matches_pending():
+    conditions = [{"field": "status", "op": "not_equals", "value": "posted"}]
+    assert evaluate_conditions("and", conditions, make_tx(status="pending")) is True
+    assert evaluate_conditions("and", conditions, make_tx(status="posted")) is False
+
+
+def test_set_category_skips_a_category_the_workspace_no_longer_offers():
+    """Hidden or deleted, an id that is not on the list is never written.
+
+    A rule keeps its category id inside a JSON action with no foreign key
+    behind it, so it can outlive the category. Writing that id would fail the
+    insert and take the whole import or sync batch with it.
+    """
+    gone = uuid.uuid4()
+    usable = uuid.uuid4()
+    actions = [
+        {"op": "set_category", "value": str(gone)},
+        {"op": "append_notes", "value": "still applied"},
+    ]
+    tx = make_tx()
+
+    category_set = apply_rule_actions(
+        actions, tx, category_already_set=False, assignable_category_ids={usable}
+    )
+
+    assert tx.category_id is None
+    assert category_set is False
+    # Only the categorization is dropped: the rest of the rule still runs.
+    assert tx.notes == "still applied"
+
+
+def test_set_category_writes_a_category_that_is_on_the_list():
+    usable = uuid.uuid4()
+    actions = [{"op": "set_category", "value": str(usable)}]
+    tx = make_tx()
+
+    category_set = apply_rule_actions(
+        actions, tx, category_already_set=False, assignable_category_ids={usable}
+    )
+
+    assert tx.category_id == usable
+    assert category_set is True
+
+
+def test_an_empty_list_of_assignable_categories_blocks_every_categorization():
+    """Distinct from passing nothing, which means the caller has no list."""
+    actions = [{"op": "set_category", "value": str(uuid.uuid4())}]
+    tx = make_tx()
+
+    assert (
+        apply_rule_actions(
+            actions, tx, category_already_set=False, assignable_category_ids=set()
+        )
+        is False
+    )
+    assert tx.category_id is None
+
+
+# --- equals / not_equals on amounts (issue #850) ---
+#
+# Amounts are stored at a fixed scale (100.00) while the rule form submits
+# the number as typed (100); a string comparison of the two forms never
+# agrees, so equals on amount must compare numerically.
+
+
+def test_equals_amount_different_scales():
+    conditions = [{"field": "amount", "op": "equals", "value": "100"}]
+    tx = make_tx(amount=Decimal("100.00"))
+    assert evaluate_conditions("and", conditions, tx) is True
+
+
+def test_equals_amount_value_with_trailing_zeros():
+    conditions = [{"field": "amount", "op": "equals", "value": "25.50"}]
+    tx = make_tx(amount=Decimal("25.5"))
+    assert evaluate_conditions("and", conditions, tx) is True
+
+
+def test_equals_amount_no_match():
+    conditions = [{"field": "amount", "op": "equals", "value": "100.01"}]
+    tx = make_tx(amount=Decimal("100.00"))
+    assert evaluate_conditions("and", conditions, tx) is False
+
+
+def test_not_equals_amount_different_scales():
+    conditions = [{"field": "amount", "op": "not_equals", "value": "100"}]
+    tx = make_tx(amount=Decimal("100.00"))
+    assert evaluate_conditions("and", conditions, tx) is False
+
+
+def test_not_equals_amount_no_match():
+    conditions = [{"field": "amount", "op": "not_equals", "value": "100.01"}]
+    tx = make_tx(amount=Decimal("100.00"))
+    assert evaluate_conditions("and", conditions, tx) is True
+
+
+def test_equals_amount_non_numeric_falls_back_to_text():
+    # A value that is not a number keeps the old text comparison: it cannot
+    # agree with a stored amount, which is what it did before the fix.
+    conditions = [{"field": "amount", "op": "equals", "value": "abc"}]
+    tx = make_tx(amount=Decimal("100.00"))
+    assert evaluate_conditions("and", conditions, tx) is False

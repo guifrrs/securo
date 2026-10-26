@@ -11,6 +11,7 @@ from typing import Optional
 from sqlalchemy import and_, case, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.app_clock import app_today
 from app.models.account import Account
 from app.models.category import Category
 from app.models.transaction import Transaction
@@ -118,6 +119,22 @@ def is_not_ignored():
     )
 
 
+def is_transfer():
+    """SQL filter: the row is a transfer rather than income or expense.
+
+    Either both legs were matched (`transfer_pair_id` set), or the row sits
+    in a category flagged `treat_as_transfer` (one-sided movements such as
+    an investment application). Same reading the transactions calendar uses
+    when it marks a day as having a transfer.
+    """
+    return or_(
+        Transaction.transfer_pair_id.is_not(None),
+        Transaction.category_id.in_(
+            select(Category.id).where(Category.treat_as_transfer.is_(True))
+        ),
+    )
+
+
 def counts_as_pnl():
     """SQL filter: True when a transaction should contribute to income/expense totals.
 
@@ -160,21 +177,27 @@ def counts_as_pnl():
     )
 
 
-def counts_on_bill():
+def counts_on_bill(net_payments: bool = False):
     """SQL filter: True when a transaction belongs on a credit-card bill.
 
     A bill total is an *amount owed*, not a reporting figure, and the two
     answer to different authorities: the bill has to match what the bank
     says you owe, while P/L answers to how the user chose to categorize
     their spending. So the card's cycle total cannot reuse
-    `counts_as_pnl` — every judgment that helper makes about what counts
+    `counts_as_pnl`. Every judgment that helper makes about what counts
     as *spending* is a judgment the bank never made.
 
     Kept out, because they are genuinely not charges on this bill:
-      - paired transfers (the bill *payment* is not a purchase),
+      - paired transfers, by default (the bill *payment* is not a
+        purchase). With ``net_payments=True`` the *credit* leg of a
+        paired transfer counts instead: an intermediate payment into the
+        card shrinks the amount owed, the way a refund does. Callers
+        net only what is left after the payment settles any debt that
+        was already outstanding (banks apply repayments oldest first),
+        see `get_account_summary`.
       - settlement debits (a repayment of a share already booked),
       - rows the user flagged `is_ignored`, on the transaction or its
-        category — those leave the account balance too, so dropping them
+        category. Those leave the account balance too, so dropping them
         from the bill keeps the card's two numbers telling one story.
 
     `treat_as_transfer` categories are handled asymmetrically, and this is
@@ -209,12 +232,37 @@ def counts_on_bill():
     transfer_category = Transaction.category_id.in_(
         select(Category.id).where(Category.treat_as_transfer.is_(True))
     )
+    if net_payments:
+        # The credit leg of a paired transfer is a payment by
+        # construction: the pair proves the money moved between the
+        # user's own accounts, so the pair itself and a transfer-like
+        # category tag on it cannot keep it off the bill.
+        paired_payment = and_(
+            Transaction.type == "credit",
+            Transaction.transfer_pair_id.is_not(None),
+        )
+        transfer_clause = or_(
+            Transaction.transfer_pair_id.is_(None), paired_payment,
+        )
+        category_clause = or_(
+            Transaction.type == "debit",
+            Transaction.category_id.is_(None),
+            ~transfer_category,
+            paired_payment,
+        )
+    else:
+        transfer_clause = Transaction.transfer_pair_id.is_(None)
+        category_clause = or_(
+            Transaction.type == "debit",
+            Transaction.category_id.is_(None),
+            ~transfer_category,
+        )
     return and_(
-        Transaction.transfer_pair_id.is_(None),
+        transfer_clause,
         Transaction.is_ignored.is_(False),
         ~and_(Transaction.source == "settlement", Transaction.type == "debit"),
         or_(Transaction.category_id.is_(None), ~ignored_category),
-        or_(Transaction.type == "debit", Transaction.category_id.is_(None), ~transfer_category),
+        category_clause,
     )
 
 
@@ -296,7 +344,7 @@ async def owner_split_offset_pnl(
             Transaction.source != "opening_balance",
             date_col >= month_start,
             date_col < month_end,
-            date_col <= date.today(),
+            date_col <= app_today(),
             Transaction.status == "posted",
             counts_as_user_pnl(),
         )
@@ -376,7 +424,7 @@ async def owner_split_offset_by_category(
             Transaction.source != "opening_balance",
             date_col >= month_start,
             date_col < month_end,
-            date_col <= date.today(),
+            date_col <= app_today(),
             Transaction.status == "posted",
             counts_as_user_pnl(),
         )
@@ -460,7 +508,7 @@ async def viewer_shared_pnl(
             Transaction.source != "opening_balance",
             date_col >= month_start,
             date_col < month_end,
-            date_col <= date.today(),
+            date_col <= app_today(),
             Transaction.status == "posted",
             counts_as_pnl(),
         )
@@ -539,7 +587,7 @@ async def viewer_shared_spending_by_category(
             Transaction.source != "opening_balance",
             date_col >= month_start,
             date_col < month_end,
-            date_col <= date.today(),
+            date_col <= app_today(),
             Transaction.status == "posted",
             counts_as_pnl(),
         )

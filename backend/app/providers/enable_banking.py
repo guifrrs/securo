@@ -48,7 +48,11 @@ JWT_CACHE_REFRESH_BEFORE = 600  # re-mint with 10 min buffer
 MAX_VALID_UNTIL_DAYS = 179
 DEFAULT_VALID_UNTIL_DAYS = MAX_VALID_UNTIL_DAYS
 DEFAULT_PSU_TYPE = "personal"
+# Days of history requested on a fresh fetch, counted inclusively (today is
+# day 1). Many banks cap the window at exactly 90 days.
 DEFAULT_HISTORY_DAYS = 90
+# Shorter window retried when a bank rejects the default one as out of bounds.
+FALLBACK_HISTORY_DAYS = 30
 TRANSACTION_PAGE_LIMIT = 50  # safety cap
 
 
@@ -118,12 +122,12 @@ def _balance_currency(balance: Optional[dict], fallback: str) -> str:
     return amount.get("currency") or fallback
 
 
-def _parse_iso_date(value: Optional[str]) -> Optional[date]:
-    if not value:
+def _parse_iso_date(value: Any) -> Optional[date]:
+    if not isinstance(value, str):
         return None
     try:
         return date.fromisoformat(value[:10])
-    except ValueError:
+    except (ValueError, TypeError):
         return None
 
 
@@ -131,6 +135,14 @@ def _join_remittance(value: Any) -> str:
     if isinstance(value, list):
         return " ".join(str(v) for v in value if v).strip()
     return (value or "").strip() if isinstance(value, str) else ""
+
+
+def _counterparty_name(raw: dict, party: str) -> str:
+    party_obj = raw.get(party)
+    name = party_obj.get("name") if isinstance(party_obj, dict) else None
+    if not isinstance(name, str) or not name.strip():
+        name = raw.get(f"{party}_name")
+    return name.strip() if isinstance(name, str) else ""
 
 
 def _txn_fingerprint(account_uid: str, raw: dict) -> str:
@@ -142,16 +154,31 @@ def _txn_fingerprint(account_uid: str, raw: dict) -> str:
     sync layer's pending↔posted twin matcher handles that.
     """
     amount = raw.get("transaction_amount") or {}
+    creditor_acc = raw.get("creditor_account")
+    debtor_acc = raw.get("debtor_account")
+    creditor_iban = (
+        creditor_acc.get("iban")
+        if isinstance(creditor_acc, dict) and isinstance(creditor_acc.get("iban"), str)
+        else ""
+    )
+    debtor_iban = (
+        debtor_acc.get("iban")
+        if isinstance(debtor_acc, dict) and isinstance(debtor_acc.get("iban"), str)
+        else ""
+    )
+    creditor_identity = creditor_iban.strip() or _counterparty_name(raw, "creditor")
+    debtor_identity = debtor_iban.strip() or _counterparty_name(raw, "debtor")
     parts = [
-        account_uid,
-        raw.get("booking_date") or "",
-        raw.get("value_date") or "",
-        str(amount.get("amount") or ""),
-        str(amount.get("currency") or ""),
-        raw.get("credit_debit_indicator") or "",
+        str(account_uid),
+        str(raw.get("booking_date") or ""),
+        str(raw.get("value_date") or ""),
+        str(raw.get("transaction_date") or ""),
+        str(amount.get("amount") or "") if isinstance(amount, dict) else "",
+        str(amount.get("currency") or "") if isinstance(amount, dict) else "",
+        str(raw.get("credit_debit_indicator") or ""),
         _join_remittance(raw.get("remittance_information"))[:80],
-        ((raw.get("creditor_account") or {}).get("iban") or ""),
-        ((raw.get("debtor_account") or {}).get("iban") or ""),
+        creditor_identity,
+        debtor_identity,
     ]
     digest = hashlib.sha256("|".join(parts).encode("utf-8")).hexdigest()
     return digest[:32]
@@ -165,13 +192,29 @@ def _extract_payee(raw: dict, indicator: str, source: str) -> Optional[str]:
     """
     if source == "none":
         return None
-    creditor = (raw.get("creditor") or {}).get("name") or raw.get("creditor_name")
-    debtor = (raw.get("debtor") or {}).get("name") or raw.get("debtor_name")
+    creditor = _counterparty_name(raw, "creditor")
+    debtor = _counterparty_name(raw, "debtor")
     if source == "description":
         return None  # let description carry the info
     if indicator == "DBIT":
         return creditor or debtor
     return debtor or creditor
+
+
+def _history_start(today: date, days: int) -> date:
+    """First day of a ``days``-long window ending today, both ends inclusive."""
+    return today - timedelta(days=days - 1)
+
+
+def _is_wrong_period_error(resp: httpx.Response) -> bool:
+    """True when the bank rejected the requested date range as out of bounds."""
+    if resp.status_code != 422:
+        return False
+    try:
+        body = resp.json()
+    except ValueError:
+        return False
+    return isinstance(body, dict) and body.get("error") == "WRONG_TRANSACTIONS_PERIOD"
 
 
 class EnableBankingProvider(BankProvider):
@@ -454,7 +497,9 @@ class EnableBankingProvider(BankProvider):
                 return inst.logo
         return None
 
-    async def _build_account(self, raw: dict) -> AccountData:
+    async def _build_account(
+        self, raw: dict, stable_external_id: Optional[str] = None
+    ) -> AccountData:
         uid = raw.get("uid") or raw.get("account_uid") or ""
         currency = raw.get("currency") or "EUR"
         # EB doesn't include balances in the session payload; fetch separately.
@@ -481,6 +526,9 @@ class EnableBankingProvider(BankProvider):
             balance=balance,
             currency=currency,
             masked_number=mask_last4(_account_identifier(raw)),
+            # From the session payload: `uid` is scoped to one session, this
+            # hash is what lets a later session find the same account again.
+            stable_external_id=stable_external_id,
         )
 
     # ----- account / transaction fetches -----
@@ -520,19 +568,31 @@ class EnableBankingProvider(BankProvider):
         if not session_id:
             raise SessionExpiredError("Enable Banking session_id missing")
         data = await self._request("GET", f"/sessions/{session_id}")
+        uids = self._account_uids(data)
+        # EB keys each account by a uid scoped to this session; the
+        # identification_hash is the id that survives a reauthorisation. It comes
+        # in the same payload we just fetched, so carry it through; otherwise a
+        # reconnect re-keys every account and the sync duplicates them all.
+        stable_external_ids = {
+            entry.get("uid"): entry.get("identification_hash")
+            for entry in (data.get("accounts_data") or [])
+            if isinstance(entry, dict) and entry.get("uid")
+        }
         result: list[AccountData] = []
-        for uid in self._account_uids(data):
+        for uid in uids:
             try:
                 details = await self._request("GET", f"/accounts/{uid}/details")
-            except (httpx.HTTPError, SessionExpiredError) as exc:
-                # Without details we can't safely name/type the account, and a
-                # bare-uid AccountData would overwrite the stored name with a
-                # placeholder. Skip this account for this run (non-destructive:
-                # the existing row and its transactions are left intact and the
-                # next sync retries) rather than corrupt it.
+            except httpx.HTTPError as exc:
+                # A *transient* per-account failure. Without details we can't
+                # safely name/type the account, and a bare-uid AccountData would
+                # overwrite the stored name with a placeholder. Skip this account
+                # for this run (non-destructive: the existing row and its
+                # transactions are left intact and the next sync retries) rather
+                # than corrupt it. SessionExpiredError is deliberately NOT caught
+                # here: a dead consent is global, never per-account.
                 logger.warning("Failed to fetch details for account %s: %s", uid, exc)
                 continue
-            result.append(await self._build_account(details))
+            result.append(await self._build_account(details, stable_external_ids.get(uid)))
         return result
 
     async def get_transactions(
@@ -543,8 +603,48 @@ class EnableBankingProvider(BankProvider):
         payee_source: str = "auto",
     ) -> list[TransactionData]:
         _ = self._session_id(credentials)  # surface expired credentials early
-        date_from = (since or (date.today() - timedelta(days=DEFAULT_HISTORY_DAYS))).isoformat()
-        date_to = date.today().isoformat()
+        # Enable Banking reads date_to as an inclusive UTC calendar day, so the
+        # window ends on the UTC date regardless of the application calendar;
+        # otherwise an application west of UTC would stop short of the day's
+        # newest transactions until its own date caught up.
+        today = datetime.now(timezone.utc).date()
+        if since is not None:
+            return await self._fetch_transactions(
+                account_external_id, since, today, payee_source
+            )
+        try:
+            return await self._fetch_transactions(
+                account_external_id,
+                _history_start(today, DEFAULT_HISTORY_DAYS),
+                today,
+                payee_source,
+            )
+        except httpx.HTTPStatusError as exc:
+            if not _is_wrong_period_error(exc.response):
+                raise
+            logger.warning(
+                "Enable Banking rejected a %d-day history window for account %s; "
+                "retrying with %d days",
+                DEFAULT_HISTORY_DAYS,
+                account_external_id,
+                FALLBACK_HISTORY_DAYS,
+            )
+            return await self._fetch_transactions(
+                account_external_id,
+                _history_start(today, FALLBACK_HISTORY_DAYS),
+                today,
+                payee_source,
+            )
+
+    async def _fetch_transactions(
+        self,
+        account_external_id: str,
+        start: date,
+        end: date,
+        payee_source: str,
+    ) -> list[TransactionData]:
+        date_from = start.isoformat()
+        date_to = end.isoformat()
         transactions: list[TransactionData] = []
         continuation_key: Optional[str] = None
         seen_continuation_keys: set[str] = set()
@@ -605,6 +705,8 @@ class EnableBankingProvider(BankProvider):
         payee_source: str,
     ) -> Optional[TransactionData]:
         amount_obj = raw.get("transaction_amount") or {}
+        if not isinstance(amount_obj, dict):
+            return None
         try:
             amount = Decimal(str(amount_obj.get("amount", "0")))
         except InvalidOperation:
@@ -615,15 +717,23 @@ class EnableBankingProvider(BankProvider):
         currency = amount_obj.get("currency") or "EUR"
         booking = _parse_iso_date(raw.get("booking_date"))
         value = _parse_iso_date(raw.get("value_date"))
-        txn_date = booking or value
+        txn_date = booking or value or _parse_iso_date(raw.get("transaction_date"))
         if not txn_date:
             return None
-        description = _join_remittance(raw.get("remittance_information")) or (
-            raw.get("additional_information") or ""
-        )
+        additional_value = raw.get("additional_information")
+        additional = additional_value.strip() if isinstance(additional_value, str) else ""
+        description = _join_remittance(raw.get("remittance_information")) or additional
+        if not description:
+            creditor = _counterparty_name(raw, "creditor")
+            debtor = _counterparty_name(raw, "debtor")
+            if indicator == "DBIT":
+                description = creditor or debtor or ""
+            else:
+                description = debtor or creditor or ""
         description = description.strip()[:500] or "Transaction"
-        external_id = (raw.get("entry_reference") or "").strip() or _txn_fingerprint(
-            account_uid, raw
+        entry_ref = (raw.get("entry_reference") or "").strip()
+        external_id = (
+            entry_ref if entry_ref and entry_ref != "0" else _txn_fingerprint(account_uid, raw)
         )
         return TransactionData(
             external_id=external_id,

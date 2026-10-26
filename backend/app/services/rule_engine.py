@@ -84,8 +84,22 @@ def _match_condition(condition: dict, tx: "Transaction") -> bool:
         if op == "ends_with":
             return tx_str.endswith(val_str)
         if op == "equals":
+            # Amounts are stored with a fixed scale (100.00) while the rule
+            # form submits the number as typed (100): comparing their string
+            # forms would never agree. Compare numerically when both sides
+            # parse, and fall back to text when either does not.
+            if field == "amount":
+                try:
+                    return Decimal(str(tx_val)) == Decimal(str(value))
+                except InvalidOperation:
+                    pass
             return tx_str == val_str
         if op == "not_equals":
+            if field == "amount":
+                try:
+                    return Decimal(str(tx_val)) != Decimal(str(value))
+                except InvalidOperation:
+                    pass
             return tx_str != val_str
         if op == "regex":
             try:
@@ -191,15 +205,21 @@ def apply_rule_actions(
     category_already_set: bool,
     *,
     skip_description: bool = False,
-    hidden_category_ids: Collection[uuid.UUID] | None = None,
+    assignable_category_ids: Collection[uuid.UUID] | None = None,
 ) -> bool:
     """Apply actions in-place and return the updated category-set flag.
 
-    A category the workspace has hidden is never assigned: hiding it means the
-    user stopped using it, so a rule that still points at one keeps its other
-    actions and drops only the categorization. The transaction is left
-    uncategorized rather than filed under a category the pickers no longer
-    offer.
+    Only a category in `assignable_category_ids` is ever written. A rule that
+    names any other one keeps its remaining actions and drops the
+    categorization, leaving the transaction uncategorized.
+
+    That covers two cases. A hidden category means the user stopped using it,
+    so the pickers no longer offer it and neither should a rule. A category
+    that is simply gone means the rule went stale: its id lives inside a JSON
+    action with no foreign key behind it, and writing it would fail the insert
+    and take the whole import or sync batch with it.
+
+    Passing nothing skips the check, for callers with no workspace at hand.
     """
     for action in actions:
         op = action.get("op")
@@ -210,7 +230,7 @@ def apply_rule_actions(
                 category_id = uuid.UUID(str(value))
             except (ValueError, AttributeError):
                 continue
-            if hidden_category_ids and category_id in hidden_category_ids:
+            if assignable_category_ids is not None and category_id not in assignable_category_ids:
                 continue
             tx.category_id = category_id
             category_already_set = True
