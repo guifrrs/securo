@@ -1084,6 +1084,132 @@ async def test_get_recurring_projections_filters_non_pnl_categories_by_default(
     assert {p["amount"] for p in balance_projections} == {100.0, 300.0}
 
 
+def _first_of_month_ahead(months: int) -> date:
+    first = app_today().replace(day=1)
+    total = first.month - 1 + months
+    return date(first.year + total // 12, total % 12 + 1, 1)
+
+
+async def _accrual_card_with_monthly_debit(
+    session: AsyncSession, test_user, test_workspace, start: date,
+) -> tuple[Account, RecurringTransaction]:
+    from app.services import admin_service
+
+    await admin_service.set_app_setting(session, "credit_card_accounting_mode", "accrual")
+    card = Account(
+        id=uuid.uuid4(), user_id=test_user.id, workspace_id=test_workspace.id,
+        name="Card", type="credit_card", balance=Decimal("0"), currency="BRL",
+        statement_close_day=30, payment_due_day=7,
+    )
+    session.add(card)
+    await session.commit()
+    rec = RecurringTransaction(
+        id=uuid.uuid4(), user_id=test_user.id, workspace_id=test_workspace.id,
+        account_id=card.id, description="Streaming", amount=Decimal("100"),
+        type="debit", frequency="monthly", start_date=start,
+        next_occurrence=start, day_of_month=15, currency="BRL",
+    )
+    session.add(rec)
+    await session.commit()
+    return card, rec
+
+
+@pytest.mark.asyncio
+async def test_summary_accrual_projects_card_recurrence_in_bill_due_month(
+    session, test_user, test_workspace
+):
+    occurrence_month = _first_of_month_ahead(2)
+    due_month = _first_of_month_ahead(3)
+    await _accrual_card_with_monthly_debit(
+        session, test_user, test_workspace, occurrence_month.replace(day=15)
+    )
+
+    occurrence_summary = await get_summary(
+        session, test_workspace.id, test_user.id, month=occurrence_month
+    )
+    due_summary = await get_summary(
+        session, test_workspace.id, test_user.id, month=due_month
+    )
+
+    assert occurrence_summary.projected_expenses == 0.0
+    assert due_summary.projected_expenses == 100.0
+
+
+@pytest.mark.asyncio
+async def test_recurring_projection_dates_card_occurrence_on_bill_due_date(
+    session, test_user, test_workspace
+):
+    occurrence_month = _first_of_month_ahead(2)
+    due_month = _first_of_month_ahead(3)
+    card, _ = await _accrual_card_with_monthly_debit(
+        session, test_user, test_workspace, occurrence_month.replace(day=15)
+    )
+
+    projections = await _get_recurring_projections(
+        session, test_workspace.id, *_month_range(due_month),
+        use_effective_date=True,
+    )
+
+    assert [(p["account_id"], p["amount"], p["date"]) for p in projections] == [
+        (card.id, 100.0, due_month.replace(day=7)),
+    ]
+
+
+@pytest.mark.asyncio
+async def test_recurring_projection_suppresses_materialized_card_occurrence_due_in_window(
+    session, test_user, test_workspace
+):
+    occurrence_month = _first_of_month_ahead(2)
+    due_month = _first_of_month_ahead(3)
+    card, rec = await _accrual_card_with_monthly_debit(
+        session, test_user, test_workspace, occurrence_month.replace(day=15)
+    )
+    session.add(Transaction(
+        id=uuid.uuid4(), user_id=test_user.id, account_id=card.id,
+        description="Streaming", amount=Decimal("100"),
+        date=occurrence_month.replace(day=15), type="debit",
+        source="recurring", currency="BRL", recurring_transaction_id=rec.id,
+    ))
+    await session.commit()
+
+    projections = await _get_recurring_projections(
+        session, test_workspace.id, *_month_range(due_month),
+        use_effective_date=True,
+    )
+
+    assert projections == []
+
+
+@pytest.mark.asyncio
+async def test_recurring_projection_effective_date_leaves_non_card_on_occurrence_date(
+    session, test_user, test_workspace
+):
+    month = _first_of_month_ahead(2)
+    checking = Account(
+        id=uuid.uuid4(), user_id=test_user.id, workspace_id=test_workspace.id,
+        name="Checking", type="checking", balance=Decimal("0"), currency="BRL",
+        statement_close_day=30, payment_due_day=7,
+    )
+    session.add(checking)
+    await session.commit()
+    session.add(RecurringTransaction(
+        id=uuid.uuid4(), user_id=test_user.id, workspace_id=test_workspace.id,
+        account_id=checking.id, description="Gym", amount=Decimal("40"),
+        type="debit", frequency="monthly", start_date=month.replace(day=15),
+        next_occurrence=month.replace(day=15), day_of_month=15, currency="BRL",
+    ))
+    await session.commit()
+
+    projections = await _get_recurring_projections(
+        session, test_workspace.id, *_month_range(month),
+        use_effective_date=True,
+    )
+
+    assert [(p["amount"], p["date"]) for p in projections] == [
+        (40.0, month.replace(day=15)),
+    ]
+
+
 @pytest.mark.asyncio
 async def test_balance_history_basic(session, test_user, test_workspace):
     acct = Account(
