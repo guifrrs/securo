@@ -25,6 +25,7 @@ from app.services._query_filters import (
 )
 from app.services import invoice_forecast_service
 from app.services.admin_service import get_credit_card_accounting_mode
+from app.services.credit_card_service import compute_effective_date
 from app.services.recurring_transaction_service import get_occurrences_in_range
 from app.services.asset_service import get_asset_values_at
 from app.services.fx_rate_service import _resolve_rate, convert
@@ -75,6 +76,7 @@ async def _get_recurring_projections(
     account_ids: Optional[list[uuid.UUID]] = None,
     *,
     include_transfer_like: bool = False,
+    use_effective_date: bool = False,
 ) -> list[dict]:
     """Compute virtual recurring transaction projections for a month.
     Pure read — no DB writes. Returns list of dicts with category_id, amount, type, currency.
@@ -85,7 +87,10 @@ async def _get_recurring_projections(
     Transfer-like categories are excluded by default because most callers use
     these rows for P&L, budgets, reports, or spending. Balance projections can
     opt in because transfers and investment applications still move cash in
-    the affected account. Ignored categories never participate."""
+    the affected account. Ignored categories never participate.
+
+    ``use_effective_date`` buckets credit card occurrences by their bill due
+    date, matching how accrual-mode P&L buckets real card transactions."""
     if account_ids is not None and len(account_ids) == 0:
         return []
     filters = [
@@ -112,6 +117,28 @@ async def _get_recurring_projections(
     result = await session.execute(stmt)
     recurring_list = list(result.scalars().all())
 
+    card_cycles: dict[uuid.UUID, tuple[int, int]] = {}
+    occurrence_start = month_start
+    if use_effective_date:
+        card_ids = {rec.account_id for rec in recurring_list if rec.account_id}
+        if card_ids:
+            cycle_result = await session.execute(
+                select(Account.id, Account.statement_close_day, Account.payment_due_day).where(
+                    Account.id.in_(card_ids),
+                    Account.type == "credit_card",
+                    Account.statement_close_day.is_not(None),
+                    Account.payment_due_day.is_not(None),
+                )
+            )
+            card_cycles = {
+                account_id: (close_day, due_day)
+                for account_id, close_day, due_day in cycle_result.all()
+            }
+        if card_cycles:
+            # A purchase on the close day waits a full cycle, then up to a
+            # month for the due day, so its bill lands at most ~61 days later.
+            occurrence_start = month_start - timedelta(days=62)
+
     # A recurrence may already have been materialized without its nominal
     # pointer being advanced yet (for example by generate-ahead workflows).
     # Suppress the matching virtual row so clients never render or total the
@@ -120,7 +147,7 @@ async def _get_recurring_projections(
         session,
         workspace_id,
         {rec.id for rec in recurring_list},
-        month_start,
+        occurrence_start,
         month_end,
     )
 
@@ -128,11 +155,12 @@ async def _get_recurring_projections(
     for rec in recurring_list:
         # Compute occurrences from the nominal pointer; linked rows are
         # filtered explicitly below because the pointer can lag materialization.
+        cycle = card_cycles.get(rec.account_id)
         occurrences = get_occurrences_in_range(
             start=rec.next_occurrence,
             frequency=rec.frequency,
             end_date=rec.end_date,
-            range_start=month_start,
+            range_start=occurrence_start if cycle else month_start,
             range_end=month_end,
             intended_day=rec.day_of_month or rec.start_date.day,
             weekend_adjustment=rec.weekend_adjustment,
@@ -140,13 +168,16 @@ async def _get_recurring_projections(
         for occ_date in occurrences:
             if (rec.id, occ_date) in materialized_occurrences:
                 continue
+            bucket_date = compute_effective_date(occ_date, *cycle) if cycle else occ_date
+            if not month_start <= bucket_date < month_end:
+                continue
             projections.append({
                 "account_id": rec.account_id,
                 "category_id": rec.category_id,
                 "amount": float(rec.amount),
                 "type": rec.type,
                 "currency": rec.currency,
-                "date": occ_date,
+                "date": bucket_date,
             })
     return projections
 
@@ -424,7 +455,8 @@ async def get_summary(
 
     # Add virtual recurring projections
     projections = await _get_recurring_projections(
-        session, workspace_id, month_start, month_end, account_ids
+        session, workspace_id, month_start, month_end, account_ids,
+        use_effective_date=accounting_mode == "accrual",
     )
     forecast_transactions = await _get_forecast_transactions(
         session, workspace_id, month_start, month_end, account_ids,
@@ -860,7 +892,8 @@ async def get_spending_by_category(
 
     # Add virtual recurring projections (debit only), converted to primary currency
     projections = await _get_recurring_projections(
-        session, workspace_id, month_start, month_end, account_ids
+        session, workspace_id, month_start, month_end, account_ids,
+        use_effective_date=accounting_mode == "accrual",
     )
     # We need category info for recurring projections — fetch categories
     cat_cache: dict[str, dict] = {}
