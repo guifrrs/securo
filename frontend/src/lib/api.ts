@@ -51,6 +51,7 @@ import type {
   IssuerTaxId,
   InvoiceSettings,
   InvoiceSummary,
+  RecurringPaymentInput,
   RecurringTransaction,
   ProjectedTransaction,
   TransactionCalendarResponse,
@@ -1323,6 +1324,13 @@ export const recurring = {
   },
   generate: async (): Promise<{ generated: number }> => {
     const { data } = await api.post('/recurring-transactions/generate')
+    return data
+  },
+  pay: async (
+    id: string,
+    payment: RecurringPaymentInput,
+  ): Promise<{ transaction: Transaction; recurring: RecurringTransaction }> => {
+    const { data } = await api.post(`/recurring-transactions/${id}/pay`, payment)
     return data
   },
 }

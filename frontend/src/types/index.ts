@@ -693,6 +693,13 @@ export interface RecurringTransaction {
   fx_rate_used: number | null
 }
 
+export interface RecurringPaymentInput {
+  date: string
+  account_id: string
+  amount: number
+  description: string
+}
+
 export interface ProjectedTransaction {
   recurring_id: string
   account_id: string | null
