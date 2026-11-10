@@ -28,7 +28,7 @@ from app.schemas.transaction import (
     TransferCreate,
 )
 from app.schemas.transaction_split import TransactionSplitInput, TransactionSplitsInput
-from app.services import reconciliation_service, split_service
+from app.services import recurring_match_service, reconciliation_service, split_service
 from app.services.account_service import get_account, get_running_balances
 from app.services.credit_card_service import apply_effective_date, cc_cycle_bill_due_dates
 from app.services.rule_service import apply_rules_to_transaction
@@ -830,6 +830,12 @@ async def create_transaction(
     user_id: uuid.UUID,
     data: TransactionCreate,
 ) -> Transaction:
+    """Create one manual transaction.
+
+    A one-off entry is matched against the bills on its account the way an
+    imported charge is, so paying a bill before its due date settles that
+    occurrence instead of leaving it projected.
+    """
     # Verify account belongs to the workspace
     account_result = await session.execute(
         select(Account)
@@ -885,6 +891,25 @@ async def create_transaction(
     # Apply rules only if no explicit category provided
     if not data.category_id:
         await apply_rules_to_transaction(session, user_id, transaction)
+
+    # An installment is part of a purchase, never a bill payment.
+    recurring = None
+    if data.installment_number is None and not transaction.is_ignored:
+        recurring = await recurring_match_service.find_bill_for_incoming(
+            session,
+            user_id,
+            transaction.account_id,
+            transaction.amount,
+            transaction.currency,
+            transaction.type,
+            transaction.date,
+            transaction.description,
+        )
+    if recurring is not None:
+        transaction.recurring_transaction_id = recurring.id
+        # Past the pending occurrence rather than the payment date: a payment
+        # dated well after an overdue occurrence still settles only that one.
+        recurring_match_service.advance_past(recurring, recurring.next_occurrence)
 
     # Stamp primary currency amount (manual override or auto)
     if data.amount_primary is not None or data.fx_rate_used is not None:
