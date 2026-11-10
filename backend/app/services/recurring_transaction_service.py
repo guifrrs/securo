@@ -11,7 +11,12 @@ from app.models.account import Account
 from app.models.bank_connection import BankConnection
 from app.models.recurring_transaction import RecurringTransaction
 from app.models.transaction import Transaction
-from app.schemas.recurring_transaction import RecurringTransactionCreate, RecurringTransactionUpdate
+from app.schemas.recurring_transaction import (
+    RecurringPayment,
+    RecurringTransactionCreate,
+    RecurringTransactionUpdate,
+)
+from app.schemas.transaction import TransactionCreate
 from app.services import recurring_match_service
 from app.services.credit_card_service import apply_effective_date
 from app.services.fx_rate_service import stamp_primary_amount
@@ -19,7 +24,7 @@ from app.services.fx_rate_service import stamp_primary_amount
 
 async def _verify_account_in_workspace(
     session: AsyncSession, workspace_id: uuid.UUID, account_id: uuid.UUID
-) -> None:
+) -> Account:
     """Raise ValueError if the account isn't reachable from this workspace."""
     result = await session.execute(
         select(Account)
@@ -32,8 +37,10 @@ async def _verify_account_in_workspace(
             ),
         )
     )
-    if result.scalar_one_or_none() is None:
+    account = result.scalar_one_or_none()
+    if account is None:
         raise ValueError("Account not found")
+    return account
 
 
 async def get_recurring_transactions(
@@ -152,6 +159,87 @@ async def delete_recurring_transaction(
     await session.delete(recurring)
     await session.commit()
     return True
+
+
+async def pay_recurring_transaction(
+    session: AsyncSession,
+    recurring_id: uuid.UUID,
+    workspace_id: uuid.UUID,
+    user_id: uuid.UUID,
+    data: RecurringPayment,
+) -> Optional[tuple[Transaction, RecurringTransaction]]:
+    """Record the payment of a bill's next unpaid occurrence.
+
+    An occurrence that already came due on a bank-synced account was written
+    as a pending placeholder, and that one is still unpaid; paying upgrades
+    it in place rather than writing a second row, and the pointer, already
+    past it, stays put. Otherwise the payment is a new manual transaction
+    that consumes the bill's next occurrence, however early it is dated.
+    """
+    from app.services import transaction_service
+
+    recurring = await get_recurring_transaction(session, recurring_id, workspace_id)
+    if recurring is None:
+        return None
+    if not recurring.is_active:
+        raise ValueError("Recurring transaction is inactive")
+
+    account_id = data.account_id or recurring.account_id
+    if account_id is None:
+        raise ValueError("account_id is required")
+    account = await _verify_account_in_workspace(session, workspace_id, account_id)
+    pay_date = data.date or today_in(await get_workspace_timezone(session, workspace_id))
+    amount = data.amount or recurring.amount
+    description = data.description or recurring.description
+    # The bill's currency belongs to the bill's account; paid from another
+    # account, the amount is in that account's currency.
+    currency = (
+        recurring.currency if account_id == recurring.account_id else account.currency
+    )
+
+    placeholder = (
+        await session.execute(
+            select(Transaction)
+            .where(
+                Transaction.recurring_transaction_id == recurring.id,
+                Transaction.source == "recurring",
+                Transaction.status == "pending",
+                Transaction.external_id.is_(None),
+            )
+            .order_by(Transaction.date)
+            .limit(1)
+        )
+    ).scalar_one_or_none()
+    if placeholder is None:
+        transaction = await transaction_service.create_transaction(
+            session,
+            workspace_id,
+            user_id,
+            TransactionCreate(
+                description=description,
+                amount=amount,
+                currency=currency,
+                date=pay_date,
+                type=recurring.type,
+                account_id=account_id,
+                category_id=recurring.category_id,
+            ),
+            recurring=recurring,
+        )
+    else:
+        placeholder.source = "manual"
+        placeholder.status = "posted"
+        placeholder.account_id = account_id
+        placeholder.amount = amount
+        placeholder.currency = currency
+        placeholder.description = description
+        placeholder.date = pay_date
+        apply_effective_date(placeholder, account)
+        await stamp_primary_amount(session, user_id, placeholder)
+        await session.commit()
+        transaction = placeholder
+    await session.refresh(recurring)
+    return transaction, recurring
 
 
 def _advance_months(current: date, months: int, intended_day: int) -> date:

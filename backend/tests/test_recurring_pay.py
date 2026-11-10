@@ -16,6 +16,7 @@ from app.services.recurring_transaction_service import (
     create_recurring_transaction,
     generate_pending,
 )
+from app.services.dashboard_service import get_projected_transactions
 from app.services.transaction_service import create_transaction
 
 
@@ -111,3 +112,127 @@ async def test_manual_installment_is_never_linked_to_a_bill(
     assert tx.recurring_transaction_id is None
     await session.refresh(bill)
     assert bill.next_occurrence == date(2025, 1, 10)
+
+
+@pytest.mark.asyncio
+async def test_pay_now_from_another_account_settles_one_occurrence(
+    client, auth_headers, session, test_user, test_workspace, account
+):
+    bill = await _make_bill(session, test_workspace, test_user, account)
+    other = Account(
+        id=uuid.uuid4(),
+        user_id=test_user.id,
+        workspace_id=test_workspace.id,
+        name="Poupança",
+        type="savings",
+        balance=Decimal("500"),
+        currency="BRL",
+    )
+    session.add(other)
+    await session.commit()
+    bill_id, other_id = bill.id, other.id
+
+    response = await client.post(
+        f"/api/recurring-transactions/{bill_id}/pay",
+        json={
+            "date": "2025-01-02",
+            "account_id": str(other_id),
+            "amount": "135.50",
+            "description": "Internet com multa",
+        },
+        headers=auth_headers,
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["transaction"]["account_id"] == str(other_id)
+    assert body["transaction"]["amount"] == "135.50"
+    assert body["transaction"]["description"] == "Internet com multa"
+    assert body["transaction"]["date"] == "2025-01-02"
+    assert body["transaction"]["source"] == "manual"
+    assert body["transaction"]["recurring_transaction_id"] == str(bill_id)
+    assert body["recurring"]["next_occurrence"] == "2025-02-10"
+
+    user_id = test_user.id
+    session.expire_all()
+    assert await generate_pending(session, user_id, up_to=date(2025, 1, 31)) == 0
+    rows = await _rows_for(session, bill_id)
+    assert [str(row.id) for row in rows] == [body["transaction"]["id"]]
+
+
+@pytest.mark.asyncio
+async def test_pay_now_upgrades_the_pending_placeholder(
+    client, auth_headers, session, test_user, test_workspace, test_account
+):
+    bill = await _make_bill(session, test_workspace, test_user, test_account)
+    bill_id = bill.id
+    assert await generate_pending(session, test_user.id, up_to=date(2025, 1, 10)) == 1
+    [placeholder] = await _rows_for(session, bill_id)
+    assert placeholder.status == "pending"
+    placeholder_id = placeholder.id
+
+    response = await client.post(
+        f"/api/recurring-transactions/{bill_id}/pay",
+        json={"date": "2025-01-11"},
+        headers=auth_headers,
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["transaction"]["id"] == str(placeholder_id)
+    assert body["transaction"]["status"] == "posted"
+    assert body["transaction"]["source"] == "manual"
+    assert body["transaction"]["date"] == "2025-01-11"
+    assert body["recurring"]["next_occurrence"] == "2025-02-10"
+
+    user_id = test_user.id
+    session.expire_all()
+    assert await generate_pending(session, user_id, up_to=date(2025, 1, 31)) == 0
+    assert len(await _rows_for(session, bill_id)) == 1
+
+
+@pytest.mark.asyncio
+async def test_pay_now_rejects_an_inactive_bill(
+    client, auth_headers, session, test_user, test_workspace, account
+):
+    bill = await _make_bill(session, test_workspace, test_user, account)
+    bill_id = bill.id
+    bill.is_active = False
+    await session.commit()
+
+    response = await client.post(
+        f"/api/recurring-transactions/{bill_id}/pay",
+        json={"date": "2025-01-05"},
+        headers=auth_headers,
+    )
+
+    assert response.status_code == 400
+    assert await _rows_for(session, bill_id) == []
+
+
+@pytest.mark.asyncio
+async def test_pay_now_removes_the_occurrence_from_the_projection(
+    client, auth_headers, session, test_user, test_workspace, account
+):
+    bill = await _make_bill(
+        session, test_workspace, test_user, account, start_date=date(2030, 3, 15)
+    )
+    bill_id = bill.id
+
+    response = await client.post(
+        f"/api/recurring-transactions/{bill_id}/pay",
+        json={"date": "2030-03-01"},
+        headers=auth_headers,
+    )
+    assert response.status_code == 200
+
+    user_id, workspace_id = test_user.id, test_workspace.id
+    session.expire_all()
+    march = await get_projected_transactions(
+        session, workspace_id, user_id, month=date(2030, 3, 1)
+    )
+    april = await get_projected_transactions(
+        session, workspace_id, user_id, month=date(2030, 4, 1)
+    )
+    assert [p.date for p in march] == []
+    assert [str(p.date) for p in april] == ["2030-04-15"]

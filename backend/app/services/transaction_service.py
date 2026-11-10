@@ -20,6 +20,7 @@ from app.models.mortgage_payment_allocation import (
     MortgagePaymentAllocation,
 )
 from app.models.payee import Payee
+from app.models.recurring_transaction import RecurringTransaction
 from app.schemas.transaction import (
     DescriptionSuggestion,
     InstallmentSeriesCreate,
@@ -829,12 +830,15 @@ async def create_transaction(
     workspace_id: uuid.UUID,
     user_id: uuid.UUID,
     data: TransactionCreate,
+    *,
+    recurring: Optional[RecurringTransaction] = None,
 ) -> Transaction:
     """Create one manual transaction.
 
-    A one-off entry is matched against the bills on its account the way an
-    imported charge is, so paying a bill before its due date settles that
-    occurrence instead of leaving it projected.
+    ``recurring`` names the bill this transaction pays. Without it, a one-off
+    entry is matched against the bills on its account the way an imported
+    charge is, so paying a bill before its due date settles that occurrence
+    instead of leaving it projected.
     """
     # Verify account belongs to the workspace
     account_result = await session.execute(
@@ -893,8 +897,11 @@ async def create_transaction(
         await apply_rules_to_transaction(session, user_id, transaction)
 
     # An installment is part of a purchase, never a bill payment.
-    recurring = None
-    if data.installment_number is None and not transaction.is_ignored:
+    if (
+        recurring is None
+        and data.installment_number is None
+        and not transaction.is_ignored
+    ):
         recurring = await recurring_match_service.find_bill_for_incoming(
             session,
             user_id,

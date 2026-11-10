@@ -5,6 +5,8 @@ from typing import Annotated, Literal, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.schemas.transaction import TransactionRead
+
 WeekendAdjustment = Literal["none", "previous_friday", "next_monday"]
 RecurringFrequency = Literal["weekly", "biweekly", "monthly", "quarterly", "semiannual", "yearly"]
 DayOfMonth = Annotated[int, Field(ge=1, le=31)]
@@ -63,3 +65,19 @@ class RecurringTransactionRead(BaseModel):
     fx_rate_used: Optional[float] = None
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class RecurringPayment(BaseModel):
+    """Pay a bill's next occurrence now. Omitted fields take the bill's own."""
+
+    date: Optional[_Date] = None
+    account_id: Optional[uuid.UUID] = None
+    amount: Optional[Decimal] = Field(default=None, gt=0)
+    description: Optional[str] = Field(default=None, min_length=1)
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class RecurringPaymentRead(BaseModel):
+    transaction: TransactionRead
+    recurring: RecurringTransactionRead
