@@ -39,6 +39,7 @@
   "DELETE /api/reconciliation/rules/{node}/{strategy_id}": 401,
   "DELETE /api/recurring-transactions/{recurring_id}": 401,
   "DELETE /api/rules/{rule_id}": 401,
+  "DELETE /api/spending-plan": 401,
   "DELETE /api/transactions/{transaction_id}": 401,
   "DELETE /api/transactions/{transaction_id}/attachments/{attachment_id}": 401,
   "DELETE /api/users/{id}": 401,
@@ -47,8 +48,8 @@
   "GET /api/accounts/{account_id}": 401,
   "GET /api/accounts/{account_id}/balance-history": 401,
   "GET /api/accounts/{account_id}/bills": 401,
-  "GET /api/accounts/{account_id}/running-balance": 401,
   "GET /api/accounts/{account_id}/loan-schedule": 401,
+  "GET /api/accounts/{account_id}/running-balance": 401,
   "GET /api/accounts/{account_id}/summary": 401,
   "GET /api/admin/accounting-mode": 401,
   "GET /api/admin/date-format": 401,
@@ -164,6 +165,8 @@
   "GET /api/search": 401,
   "GET /api/settings/attachments": 200,
   "GET /api/setup/status": 200,
+  "GET /api/spending-plan": 401,
+  "GET /api/spending-plan/timeline": 401,
   "GET /api/timezones": 401,
   "GET /api/transactions": 401,
   "GET /api/transactions/calendar": 401,
@@ -316,6 +319,7 @@
   "POST /api/rules/packs/{pack_code}/install": 401,
   "POST /api/rules/preview": 401,
   "POST /api/setup/create-admin": 403,
+  "POST /api/spending-plan/simulate": 401,
   "POST /api/transactions": 401,
   "POST /api/transactions/bulk-delete": 401,
   "POST /api/transactions/import": 401,
@@ -331,7 +335,8 @@
   "POST /api/workspaces/{workspace_id}/members": 401,
   "PUT /api/agents/{agent_id}/tools": 401,
   "PUT /api/mortgage-payments/{payment_id}": 401,
-  "PUT /api/reconciliation/rules/{node}/order": 401
+  "PUT /api/reconciliation/rules/{node}/order": 401,
+  "PUT /api/spending-plan": 401
  },
  "empty": {
   "PATCH /api/admin/settings/{key}": 422,
@@ -393,6 +398,7 @@
   "POST /api/rules/import": 422,
   "POST /api/rules/preview": 422,
   "POST /api/setup/create-admin": 422,
+  "POST /api/spending-plan/simulate": 422,
   "POST /api/transactions": 422,
   "POST /api/transactions/bulk-delete": 422,
   "POST /api/transactions/import": 422,
@@ -403,7 +409,8 @@
   "POST /api/workspaces": 422,
   "POST /api/workspaces/{workspace_id}/members": 422,
   "PUT /api/mortgage-payments/{payment_id}": 422,
-  "PUT /api/reconciliation/rules/{node}/order": 422
+  "PUT /api/reconciliation/rules/{node}/order": 422,
+  "PUT /api/spending-plan": 422
  },
  "ok": {
   "DELETE /api/accounts/{account_id}": 204,
@@ -445,6 +452,7 @@
   "DELETE /api/reconciliation/rules/{node}/{strategy_id}": 400,
   "DELETE /api/recurring-transactions/{recurring_id}": 204,
   "DELETE /api/rules/{rule_id}": 204,
+  "DELETE /api/spending-plan": 204,
   "DELETE /api/transactions/{transaction_id}": 204,
   "DELETE /api/transactions/{transaction_id}/attachments/{attachment_id}": 204,
   "DELETE /api/users/{id}": 403,
@@ -453,8 +461,8 @@
   "GET /api/accounts/{account_id}": 200,
   "GET /api/accounts/{account_id}/balance-history": 200,
   "GET /api/accounts/{account_id}/bills": 200,
-  "GET /api/accounts/{account_id}/running-balance": 200,
   "GET /api/accounts/{account_id}/loan-schedule": 200,
+  "GET /api/accounts/{account_id}/running-balance": 200,
   "GET /api/accounts/{account_id}/summary": 200,
   "GET /api/admin/accounting-mode": 200,
   "GET /api/admin/date-format": 200,
@@ -568,6 +576,8 @@
   "GET /api/search": 200,
   "GET /api/settings/attachments": 200,
   "GET /api/setup/status": 200,
+  "GET /api/spending-plan": 200,
+  "GET /api/spending-plan/timeline": 200,
   "GET /api/timezones": 200,
   "GET /api/transactions": 200,
   "GET /api/transactions/calendar": 200,
@@ -720,6 +730,7 @@
   "POST /api/rules/packs/{pack_code}/install": 200,
   "POST /api/rules/preview": 200,
   "POST /api/setup/create-admin": 403,
+  "POST /api/spending-plan/simulate": 200,
   "POST /api/transactions": 201,
   "POST /api/transactions/bulk-delete": 200,
   "POST /api/transactions/import": 201,
@@ -735,7 +746,8 @@
   "POST /api/workspaces/{workspace_id}/members": 400,
   "PUT /api/agents/{agent_id}/tools": 200,
   "PUT /api/mortgage-payments/{payment_id}": 404,
-  "PUT /api/reconciliation/rules/{node}/order": 400
+  "PUT /api/reconciliation/rules/{node}/order": 400,
+  "PUT /api/spending-plan": 200
  },
  "unknown_id": {
   "DELETE /api/accounts/{account_id}": 404,
@@ -782,8 +794,8 @@
   "GET /api/accounts/{account_id}": 404,
   "GET /api/accounts/{account_id}/balance-history": 404,
   "GET /api/accounts/{account_id}/bills": 404,
-  "GET /api/accounts/{account_id}/running-balance": 404,
   "GET /api/accounts/{account_id}/loan-schedule": 404,
+  "GET /api/accounts/{account_id}/running-balance": 404,
   "GET /api/accounts/{account_id}/summary": 404,
   "GET /api/admin/users/{user_id}": 404,
   "GET /api/agents/connections/{conn_id}": 404,
@@ -943,6 +955,7 @@
   "DELETE /api/reconciliation/rules/{node}/{strategy_id}": 403,
   "DELETE /api/recurring-transactions/{recurring_id}": 403,
   "DELETE /api/rules/{rule_id}": 403,
+  "DELETE /api/spending-plan": 403,
   "DELETE /api/transactions/{transaction_id}": 403,
   "DELETE /api/transactions/{transaction_id}/attachments/{attachment_id}": 403,
   "DELETE /api/users/{id}": 403,
@@ -1078,6 +1091,7 @@
   "POST /api/rules/packs/{pack_code}/install": 403,
   "POST /api/rules/preview": 200,
   "POST /api/setup/create-admin": 403,
+  "POST /api/spending-plan/simulate": 200,
   "POST /api/transactions": 403,
   "POST /api/transactions/bulk-delete": 403,
   "POST /api/transactions/import": 403,
@@ -1093,6 +1107,7 @@
   "POST /api/workspaces/{workspace_id}/members": 403,
   "PUT /api/agents/{agent_id}/tools": 403,
   "PUT /api/mortgage-payments/{payment_id}": 403,
-  "PUT /api/reconciliation/rules/{node}/order": 403
+  "PUT /api/reconciliation/rules/{node}/order": 403,
+  "PUT /api/spending-plan": 403
  }
 }

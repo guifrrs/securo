@@ -109,6 +109,10 @@ import type {
   ReconciliationRulePatch,
   ReconciliationSuggestion,
   ReconciliationHistoryEvent,
+  SimulatedPurchase,
+  SpendingPlan,
+  SpendingPlanInput,
+  SpendingPlanTimeline,
 } from '@/types'
 
 const api = axios.create({
@@ -1404,6 +1408,35 @@ const acctIdsParam = (accountIds?: string[]) =>
   accountIds && accountIds.length > 0
     ? { params: { account_ids: accountIds }, paramsSerializer: { indexes: null as null } }
     : {}
+
+export const spendingPlan = {
+  get: async (): Promise<SpendingPlan | null> => {
+    const { data } = await api.get('/spending-plan')
+    return data
+  },
+  save: async (plan: SpendingPlanInput): Promise<SpendingPlan> => {
+    const { data } = await api.put('/spending-plan', plan)
+    return data
+  },
+  remove: async (): Promise<void> => {
+    await api.delete('/spending-plan')
+  },
+  // `dailyAllowance` previews another allowance without saving it.
+  timeline: async (dailyAllowance?: number): Promise<SpendingPlanTimeline> => {
+    const { data } = await api.get('/spending-plan/timeline', {
+      params: dailyAllowance === undefined ? {} : { daily_allowance: dailyAllowance },
+    })
+    return data
+  },
+  // The timeline after hypothetical purchases. Saves nothing.
+  simulate: async (purchases: SimulatedPurchase[], dailyAllowance?: number): Promise<SpendingPlanTimeline> => {
+    const { data } = await api.post('/spending-plan/simulate', {
+      purchases,
+      ...(dailyAllowance === undefined ? {} : { daily_allowance: dailyAllowance }),
+    })
+    return data
+  },
+}
 
 export const dashboard = {
   summary: async (month?: string, balanceDate?: string, accountIds?: string[], assetGroupIds?: string[]): Promise<DashboardSummary> => {

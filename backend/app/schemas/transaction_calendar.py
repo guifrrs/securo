@@ -46,6 +46,9 @@ class TransactionCalendarDay(BaseModel):
     projected_income: float = 0.0
     projected_expense: float = 0.0
     projected_transfer_net: float = 0.0
+    #: What the spending plan's daily allowance takes from this day's balance.
+    #: Zero on past days and when the workspace has no plan.
+    projected_allowance: float = 0.0
     actual_count: int = 0
     projected_count: int = 0
     has_income: bool = False
@@ -59,3 +62,6 @@ class TransactionCalendarResponse(BaseModel):
     currency: str
     account_ids: list[uuid.UUID] | None = None
     days: list[TransactionCalendarDay]
+    #: True when the workspace's spending plan covers this calendar's accounts,
+    #: so each day's balance already spends the daily allowance.
+    spending_plan_applied: bool = False

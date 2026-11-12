@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ArrowLeftRight, CalendarDays, ChartNoAxesColumn, CircleDot, Clock, EyeClosed, Minus } from 'lucide-react'
@@ -14,6 +15,7 @@ import { useEffectiveTimezone } from '@/hooks/use-timezone'
 import { cn } from '@/lib/utils'
 import { formatCurrency } from '@/lib/format'
 import { shouldShowPendingBadge } from '@/lib/transaction-status'
+import { spendingPlan as spendingPlanApi } from '@/lib/api'
 
 function parseLocalDate(value: string) {
   return new Date(`${value}T00:00:00`)
@@ -91,6 +93,17 @@ export function TransactionCalendarView({
   // own idea of today, so the highlighted day has to be the same one.
   const timeZone = useEffectiveTimezone()
   const today = todayInTimezone(timeZone)
+  // The green "covered" days come from the spending plan's own projection, the
+  // same one behind the dashboard's "covered until", so both always agree. The
+  // server only flags the calendar when the plan spends from its accounts.
+  const planApplied = calendar?.spending_plan_applied === true
+  const { data: planTimeline } = useQuery({
+    queryKey: ['dashboard', 'spending-plan', 'timeline', null],
+    queryFn: () => spendingPlanApi.timeline(),
+    enabled: planApplied,
+  })
+  const coveredUntil = planApplied ? planTimeline?.covered_until ?? null : null
+  const isCovered = (date: string) => coveredUntil !== null && date >= today && date <= coveredUntil
 
   const accountById = useMemo(() => {
     const map = new Map<string, Account>()
@@ -142,7 +155,7 @@ export function TransactionCalendarView({
     <div className="mb-4 flex flex-col gap-4 md:flex-row md:items-start">
       <section className="min-w-0 flex-1 bg-card rounded-xl border border-border shadow-sm overflow-hidden">
         <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 border-b border-border sm:px-5">
-          <CalendarLegend />
+          <CalendarLegend showCovered={coveredUntil !== null} />
           <div className="flex flex-wrap items-center gap-2">
             <CalendarMetricToggle value={metric} onChange={setMetric} />
             <CalendarDensityToggle value={density} onChange={setDensity} />
@@ -184,6 +197,7 @@ export function TransactionCalendarView({
               day={day}
               selected={day.date === selectedDate}
               today={day.date === today}
+              covered={isCovered(day.date)}
               currency={calendar.currency}
               locale={locale}
               mask={mask}
@@ -211,6 +225,7 @@ export function TransactionCalendarView({
                   day={day}
                   selected={selected}
                   panelId={panelId}
+                  covered={isCovered(day.date)}
                   currency={calendar.currency}
                   locale={locale}
                   dateLocale={dateLocale}
@@ -578,7 +593,7 @@ function ActivityBars({
   )
 }
 
-function CalendarLegend() {
+function CalendarLegend({ showCovered }: { showCovered: boolean }) {
   const { t } = useTranslation()
   return (
     <div className="flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
@@ -591,6 +606,12 @@ function CalendarLegend() {
       <LegendItem tone="projected" label={t('transactions.calendarProjected')}>
         <CalendarDays size={9} />
       </LegendItem>
+      {showCovered && (
+        <span className="inline-flex items-center gap-1">
+          <span className="inline-block h-2.5 w-2.5 rounded-sm bg-emerald-200 dark:bg-emerald-500/30" />
+          {t('spendingPlan.calendarCovered')}
+        </span>
+      )}
     </div>
   )
 }
@@ -669,6 +690,7 @@ function DayCell({
   day,
   selected,
   today,
+  covered,
   currency,
   locale,
   mask,
@@ -680,6 +702,7 @@ function DayCell({
   day: TransactionCalendarDay
   selected: boolean
   today: boolean
+  covered: boolean
   currency: string
   locale: string
   mask: (value: string) => string
@@ -713,6 +736,7 @@ function DayCell({
         detailed ? 'min-h-44' : 'min-h-24',
         !day.in_month && 'bg-muted/20 text-muted-foreground',
         day.in_month && isLowBalance && 'bg-rose-50/60 dark:bg-rose-950/20',
+        day.in_month && metric === 'balance' && covered && !isLowBalance && 'bg-emerald-50/70 dark:bg-emerald-500/10',
         // Selection is a ring, not a fill, on low-balance days: tinting the cell
         // would hide the negative-balance warning exactly when the user opens it.
         // Inset so the container's overflow-hidden never clips it on edge rows.
@@ -959,6 +983,7 @@ function MobileDayRow({
   day,
   selected,
   panelId,
+  covered,
   currency,
   locale,
   dateLocale,
@@ -970,6 +995,7 @@ function MobileDayRow({
   day: TransactionCalendarDay
   selected: boolean
   panelId: string
+  covered: boolean
   currency: string
   locale: string
   dateLocale: string
@@ -991,6 +1017,7 @@ function MobileDayRow({
       className={cn(
         'w-full border-l-4 border-transparent px-4 py-3 text-left transition-colors hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary',
         isLowBalance && !selected && 'bg-rose-50/75 dark:bg-rose-950/25',
+        metric === 'balance' && covered && !isLowBalance && !selected && 'bg-emerald-50/75 dark:bg-emerald-500/10',
         selected && 'border-primary bg-primary/10 dark:bg-primary/15',
       )}
     >
@@ -1150,6 +1177,15 @@ function SelectedDayPanel({
                   amount={activity.projectedNet}
                 />
               )}
+            </div>
+          )}
+          {(day.projected_allowance ?? 0) > 0 && (
+            <div className="border-b border-border px-4 py-3">
+              <DayPanelRow
+                label={t('spendingPlan.calendarAllowance')}
+                value={mask(`−${formatCurrency(day.projected_allowance ?? 0, currency, locale)}`)}
+                amount={-(day.projected_allowance ?? 0)}
+              />
             </div>
           )}
         </>

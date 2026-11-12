@@ -30,6 +30,7 @@ const api = vi.hoisted(() => ({
   payees: { list: vi.fn() },
   rules: { create: vi.fn(), list: vi.fn() },
   settings: { attachments: vi.fn() },
+  spendingPlan: { get: vi.fn(async () => null), timeline: vi.fn() },
 }))
 
 vi.mock('@/lib/api', () => api)

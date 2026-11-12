@@ -49,6 +49,7 @@ import { TransactionDrillDown, type DrillDownFilter } from '@/components/transac
 import { TransactionDialog, type TransactionSavePayload } from '@/components/transaction-dialog'
 import { extractApiError } from '@/lib/api-errors'
 import { TransactionCalendarView } from '@/components/transaction-calendar-view'
+import { SpendingPlanSummary } from '@/components/spending-plan-summary'
 import { TransactionsViewSwitcher, type TransactionsViewMode } from '@/components/transactions-view-switcher'
 import { RuleDialog, type RuleDialogInitialData } from '@/components/rule-dialog'
 import { usePrivacyMode } from '@/hooks/use-privacy-mode'
@@ -998,6 +999,8 @@ export default function DashboardPage() {
           </p>
         )}
       </div>
+
+      <SpendingPlanSummary />
 
       {/* Uncategorized banner */}
       {!summaryLoading && (
