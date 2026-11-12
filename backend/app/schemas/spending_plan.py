@@ -22,6 +22,18 @@ class SpendingPlanRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class SimulatedPurchase(BaseModel):
+    description: Optional[str] = None
+    amount: Decimal = Field(gt=0)
+    installments: int = Field(default=1, ge=1, le=120)
+    first_date: _Date
+
+
+class SpendingPlanSimulation(BaseModel):
+    daily_allowance: Optional[Decimal] = Field(default=None, ge=0)
+    purchases: list[SimulatedPurchase] = Field(min_length=1, max_length=20)
+
+
 class SpendingPlanPoint(BaseModel):
     date: _Date
     balance: float

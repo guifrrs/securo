@@ -3309,6 +3309,23 @@
     "remove": "Odebrat plán",
     "removed": "Plán odebrán",
     "calendarAllowance": "Denní plán",
-    "calendarCovered": "Pokryto denním plánem"
+    "calendarCovered": "Pokryto denním plánem",
+    "simulateTitle": "Simulovat nákup",
+    "simulateHint": "Podívejte se, jak nákup změní další měsíce, než ho uděláte. Nic se neukládá.",
+    "purchaseDescription": "Co",
+    "purchaseDescriptionPlaceholder": "Kolo",
+    "purchaseAmount": "Celková částka",
+    "purchaseInstallments": "Splátky",
+    "purchaseFirstDate": "První splátka",
+    "simulate": "Simulovat",
+    "clearSimulation": "Vymazat",
+    "withoutPurchase": "Bez",
+    "withPurchase": "S nákupem",
+    "lowestBalance": "Nejnižší zůstatek",
+    "savingsTitle": "Kolik ušetříte",
+    "savingsHint": "Předpokládaný zůstatek k datu ve srovnání s dneškem.",
+    "savingsUntil": "Do",
+    "savingsBalance": "Zůstatek k {{date}}",
+    "savingsDelta": "{{amount}} oproti dnešku"
   }
 }

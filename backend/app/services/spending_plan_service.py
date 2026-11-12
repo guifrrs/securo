@@ -8,9 +8,10 @@ balance stays above the floor.
 """
 
 import uuid
+from dataclasses import replace
 from datetime import date, timedelta
 from decimal import Decimal
-from typing import Optional
+from typing import Optional, Sequence
 
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -24,6 +25,7 @@ from app.models.spending_plan import SpendingPlan
 from app.models.transaction import Transaction
 from app.models.user import User
 from app.schemas.spending_plan import (
+    SimulatedPurchase,
     SpendingPlanPoint,
     SpendingPlanTimeline,
     SpendingPlanToday,
@@ -158,17 +160,39 @@ async def calendar_allowance(
     return float(plan.daily_allowance), spent
 
 
+def purchase_installments(
+    purchases: Sequence[SimulatedPurchase], today: date
+) -> list[tuple[date, float]]:
+    """Split each simulated purchase into monthly installments.
+
+    The cents that do not divide evenly go to the first installment, the way
+    card issuers usually charge them. An installment dated before today lands
+    today: the simulation asks about the money ahead, not the past.
+    """
+    charges: list[tuple[date, float]] = []
+    for purchase in purchases:
+        total_cents = int((purchase.amount * 100).to_integral_value())
+        share, leftover = divmod(total_cents, purchase.installments)
+        for number in range(purchase.installments):
+            cents = share + (leftover if number == 0 else 0)
+            day = max(add_months(purchase.first_date, number), today)
+            charges.append((day, cents / 100))
+    return charges
+
+
 async def get_timeline(
     session: AsyncSession,
     workspace_id: uuid.UUID,
     user_id: uuid.UUID,
     daily_allowance: Optional[Decimal] = None,
+    purchases: Sequence[SimulatedPurchase] = (),
 ) -> SpendingPlanTimeline:
     """Project the plan's accounts day by day through the plan's horizon.
 
-    ``daily_allowance`` previews another allowance without saving it. Without
-    a saved plan the timeline still answers, with no allowance and the default
-    horizon, so the setup screen can suggest a safe value.
+    ``daily_allowance`` previews another allowance and ``purchases`` previews
+    purchases, both without saving anything. Without a saved plan the
+    timeline still answers, with no allowance and the default horizon, so
+    the setup screen can suggest a safe value.
     """
     user = await session.get(User, user_id)
     primary_currency = user.primary_currency if user else get_settings().default_currency
@@ -187,6 +211,11 @@ async def get_timeline(
     base = await load_projection_base(
         session, workspace_id, primary_currency, today, horizon_end + timedelta(days=1), scope
     )
+    if purchases:
+        deltas = dict(base.deltas)
+        for day, amount in purchase_installments(purchases, today):
+            deltas[day] = deltas.get(day, 0.0) - amount
+        base = replace(base, deltas=deltas)
     spent = await variable_spent_on(session, workspace_id, primary_currency, today, scope)
     points = walk(base, today, allowance, spent)
     last_covered = covered_until(points, today, floor)

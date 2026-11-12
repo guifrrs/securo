@@ -109,6 +109,7 @@ import type {
   ReconciliationRulePatch,
   ReconciliationSuggestion,
   ReconciliationHistoryEvent,
+  SimulatedPurchase,
   SpendingPlan,
   SpendingPlanInput,
   SpendingPlanTimeline,
@@ -1424,6 +1425,14 @@ export const spendingPlan = {
   timeline: async (dailyAllowance?: number): Promise<SpendingPlanTimeline> => {
     const { data } = await api.get('/spending-plan/timeline', {
       params: dailyAllowance === undefined ? {} : { daily_allowance: dailyAllowance },
+    })
+    return data
+  },
+  // The timeline after hypothetical purchases. Saves nothing.
+  simulate: async (purchases: SimulatedPurchase[], dailyAllowance?: number): Promise<SpendingPlanTimeline> => {
+    const { data } = await api.post('/spending-plan/simulate', {
+      purchases,
+      ...(dailyAllowance === undefined ? {} : { daily_allowance: dailyAllowance }),
     })
     return data
   },

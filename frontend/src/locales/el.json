@@ -3147,6 +3147,23 @@
     "remove": "Κατάργηση πλάνου",
     "removed": "Το πλάνο καταργήθηκε",
     "calendarAllowance": "Ημερήσιο πλάνο",
-    "calendarCovered": "Καλύπτεται από το ημερήσιο πλάνο"
+    "calendarCovered": "Καλύπτεται από το ημερήσιο πλάνο",
+    "simulateTitle": "Προσομοίωση αγοράς",
+    "simulateHint": "Δείτε πώς μια αγορά αλλάζει τους επόμενους μήνες πριν την κάνετε. Δεν αποθηκεύεται τίποτα.",
+    "purchaseDescription": "Τι",
+    "purchaseDescriptionPlaceholder": "Ποδήλατο",
+    "purchaseAmount": "Συνολικό ποσό",
+    "purchaseInstallments": "Δόσεις",
+    "purchaseFirstDate": "Πρώτη δόση",
+    "simulate": "Προσομοίωση",
+    "clearSimulation": "Καθαρισμός",
+    "withoutPurchase": "Χωρίς",
+    "withPurchase": "Με την αγορά",
+    "lowestBalance": "Χαμηλότερο υπόλοιπο",
+    "savingsTitle": "Πόσα αποταμιεύετε",
+    "savingsHint": "Το προβλεπόμενο υπόλοιπο σε μια ημερομηνία, σε σύγκριση με σήμερα.",
+    "savingsUntil": "Έως",
+    "savingsBalance": "Υπόλοιπο στις {{date}}",
+    "savingsDelta": "{{amount}} σε σύγκριση με σήμερα"
   }
 }

@@ -3147,6 +3147,23 @@
     "remove": "Remove plan",
     "removed": "Plan removed",
     "calendarAllowance": "Daily plan",
-    "calendarCovered": "Covered by the daily plan"
+    "calendarCovered": "Covered by the daily plan",
+    "simulateTitle": "Simulate a purchase",
+    "simulateHint": "See how a purchase changes the months ahead before you make it. Nothing is saved.",
+    "purchaseDescription": "What",
+    "purchaseDescriptionPlaceholder": "Bike",
+    "purchaseAmount": "Total amount",
+    "purchaseInstallments": "Installments",
+    "purchaseFirstDate": "First installment",
+    "simulate": "Simulate",
+    "clearSimulation": "Clear",
+    "withoutPurchase": "Without",
+    "withPurchase": "With the purchase",
+    "lowestBalance": "Lowest balance",
+    "savingsTitle": "How much you save",
+    "savingsHint": "The projected balance on a date, compared with today.",
+    "savingsUntil": "Until",
+    "savingsBalance": "Balance on {{date}}",
+    "savingsDelta": "{{amount}} compared with today"
   }
 }

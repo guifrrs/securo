@@ -4,6 +4,7 @@ from decimal import Decimal
 
 import pytest
 from httpx import AsyncClient
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.app_clock import app_today
@@ -11,14 +12,14 @@ from app.models.account import Account
 from app.models.category import Category
 from app.models.recurring_transaction import RecurringTransaction
 from app.models.transaction import Transaction
-from app.schemas.spending_plan import SpendingPlanWrite
+from app.schemas.spending_plan import SimulatedPurchase, SpendingPlanWrite
 from app.services.balance_projection import (
     ProjectionBase,
     covered_until,
     safe_daily_allowance,
     walk,
 )
-from app.services.spending_plan_service import get_timeline, save_plan
+from app.services.spending_plan_service import get_timeline, purchase_installments, save_plan
 from app.services.transaction_calendar_service import get_transaction_calendar
 
 TODAY = date(2027, 3, 10)
@@ -285,3 +286,63 @@ async def test_spending_plan_api_round_trip(client: AsyncClient, auth_headers: d
     deleted = await client.delete("/api/spending-plan", headers=auth_headers)
     assert deleted.status_code == 204
     assert (await client.get("/api/spending-plan", headers=auth_headers)).json() is None
+
+
+def test_purchase_installments_split_monthly_with_leftover_cents_first():
+    purchase = SimulatedPurchase(amount=Decimal("100.00"), installments=3, first_date=date(2027, 1, 31))
+
+    assert purchase_installments([purchase], today=date(2027, 1, 10)) == [
+        (date(2027, 1, 31), 33.34),
+        (date(2027, 2, 28), 33.33),
+        (date(2027, 3, 31), 33.33),
+    ]
+
+
+def test_purchase_installments_dated_in_the_past_land_today():
+    purchase = SimulatedPurchase(amount=Decimal("50"), installments=2, first_date=date(2027, 1, 1))
+
+    assert purchase_installments([purchase], today=date(2027, 1, 20)) == [
+        (date(2027, 1, 20), 25.0),
+        (date(2027, 2, 1), 25.0),
+    ]
+
+
+@pytest.mark.asyncio
+async def test_simulation_moves_the_balance_without_saving_anything(
+    session: AsyncSession, test_user, test_workspace
+):
+    today = app_today()
+    account = await _checking(session, test_user.id, test_workspace.id)
+    session.add(
+        _tx(test_user.id, test_workspace.id, account.id, 3000, "credit", today - timedelta(days=1),
+            source="opening_balance")
+    )
+    await session.commit()
+    bike = SimulatedPurchase(amount=Decimal("1200"), installments=12, first_date=today + timedelta(days=1))
+
+    plain = await get_timeline(session, test_workspace.id, test_user.id, Decimal("0"))
+    simulated = await get_timeline(session, test_workspace.id, test_user.id, Decimal("0"), [bike])
+
+    assert plain.points[0].balance == simulated.points[0].balance == 3000.0
+    assert simulated.points[1].balance == 2900.0
+    # Twelve installments of 100 all fall inside the default 12-month horizon.
+    assert simulated.points[-1].balance == 1800.0
+    assert plain.points[-1].balance == 3000.0
+    assert simulated.safe_daily_allowance < plain.safe_daily_allowance
+    rows = (await session.execute(select(func.count()).select_from(Transaction))).scalar_one()
+    assert rows == 1
+
+
+@pytest.mark.asyncio
+async def test_simulate_api_rejects_an_empty_purchase_list(client: AsyncClient, auth_headers: dict):
+    rejected = await client.post(
+        "/api/spending-plan/simulate", headers=auth_headers, json={"purchases": []}
+    )
+    accepted = await client.post(
+        "/api/spending-plan/simulate",
+        headers=auth_headers,
+        json={"purchases": [{"amount": "600", "installments": 6, "first_date": "2030-01-15"}]},
+    )
+
+    assert rejected.status_code == 422
+    assert accepted.status_code == 200

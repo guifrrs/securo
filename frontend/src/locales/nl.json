@@ -3149,6 +3149,23 @@
     "remove": "Plan verwijderen",
     "removed": "Plan verwijderd",
     "calendarAllowance": "Dagplan",
-    "calendarCovered": "Gedekt door het dagplan"
+    "calendarCovered": "Gedekt door het dagplan",
+    "simulateTitle": "Aankoop simuleren",
+    "simulateHint": "Zie hoe een aankoop de komende maanden verandert voordat je hem doet. Er wordt niets opgeslagen.",
+    "purchaseDescription": "Wat",
+    "purchaseDescriptionPlaceholder": "Fiets",
+    "purchaseAmount": "Totaalbedrag",
+    "purchaseInstallments": "Termijnen",
+    "purchaseFirstDate": "Eerste termijn",
+    "simulate": "Simuleren",
+    "clearSimulation": "Wissen",
+    "withoutPurchase": "Zonder",
+    "withPurchase": "Met de aankoop",
+    "lowestBalance": "Laagste saldo",
+    "savingsTitle": "Hoeveel je spaart",
+    "savingsHint": "Het verwachte saldo op een datum, vergeleken met vandaag.",
+    "savingsUntil": "Tot",
+    "savingsBalance": "Saldo op {{date}}",
+    "savingsDelta": "{{amount}} ten opzichte van vandaag"
   }
 }

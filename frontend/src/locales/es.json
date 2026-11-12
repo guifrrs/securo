@@ -3151,6 +3151,23 @@
     "remove": "Eliminar plan",
     "removed": "Plan eliminado",
     "calendarAllowance": "Plan diario",
-    "calendarCovered": "Cubierto por el plan diario"
+    "calendarCovered": "Cubierto por el plan diario",
+    "simulateTitle": "Simular una compra",
+    "simulateHint": "Mira cómo una compra cambia los próximos meses antes de hacerla. No se guarda nada.",
+    "purchaseDescription": "Qué",
+    "purchaseDescriptionPlaceholder": "Bicicleta",
+    "purchaseAmount": "Importe total",
+    "purchaseInstallments": "Cuotas",
+    "purchaseFirstDate": "Primera cuota",
+    "simulate": "Simular",
+    "clearSimulation": "Borrar",
+    "withoutPurchase": "Sin",
+    "withPurchase": "Con la compra",
+    "lowestBalance": "Saldo más bajo",
+    "savingsTitle": "Cuánto ahorras",
+    "savingsHint": "El saldo proyectado en una fecha, comparado con hoy.",
+    "savingsUntil": "Hasta",
+    "savingsBalance": "Saldo el {{date}}",
+    "savingsDelta": "{{amount}} respecto a hoy"
   }
 }

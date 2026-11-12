@@ -3147,6 +3147,23 @@
     "remove": "Terv törlése",
     "removed": "Terv törölve",
     "calendarAllowance": "Napi terv",
-    "calendarCovered": "A napi terv fedezi"
+    "calendarCovered": "A napi terv fedezi",
+    "simulateTitle": "Vásárlás szimulálása",
+    "simulateHint": "Nézd meg, hogyan változtatja meg egy vásárlás a következő hónapokat, mielőtt megteszed. Semmi sem mentődik.",
+    "purchaseDescription": "Mit",
+    "purchaseDescriptionPlaceholder": "Bicikli",
+    "purchaseAmount": "Teljes összeg",
+    "purchaseInstallments": "Részletek",
+    "purchaseFirstDate": "Első részlet",
+    "simulate": "Szimulálás",
+    "clearSimulation": "Törlés",
+    "withoutPurchase": "Nélküle",
+    "withPurchase": "A vásárlással",
+    "lowestBalance": "Legalacsonyabb egyenleg",
+    "savingsTitle": "Mennyit spórolsz",
+    "savingsHint": "Az előre jelzett egyenleg egy adott napon, a maihoz képest.",
+    "savingsUntil": "Eddig",
+    "savingsBalance": "Egyenleg ekkor: {{date}}",
+    "savingsDelta": "{{amount}} a maihoz képest"
   }
 }

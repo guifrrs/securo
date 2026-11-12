@@ -3293,6 +3293,23 @@
     "remove": "Odstrániť plán",
     "removed": "Plán odstránený",
     "calendarAllowance": "Denný plán",
-    "calendarCovered": "Pokryté denným plánom"
+    "calendarCovered": "Pokryté denným plánom",
+    "simulateTitle": "Simulovať nákup",
+    "simulateHint": "Pozrite sa, ako nákup zmení ďalšie mesiace, skôr než ho urobíte. Nič sa neukladá.",
+    "purchaseDescription": "Čo",
+    "purchaseDescriptionPlaceholder": "Bicykel",
+    "purchaseAmount": "Celková suma",
+    "purchaseInstallments": "Splátky",
+    "purchaseFirstDate": "Prvá splátka",
+    "simulate": "Simulovať",
+    "clearSimulation": "Vymazať",
+    "withoutPurchase": "Bez",
+    "withPurchase": "S nákupom",
+    "lowestBalance": "Najnižší zostatok",
+    "savingsTitle": "Koľko ušetríte",
+    "savingsHint": "Predpokladaný zostatok k dátumu v porovnaní s dneškom.",
+    "savingsUntil": "Do",
+    "savingsBalance": "Zostatok k {{date}}",
+    "savingsDelta": "{{amount}} oproti dnešku"
   }
 }

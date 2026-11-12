@@ -3259,6 +3259,23 @@
     "remove": "Usuń plan",
     "removed": "Plan usunięty",
     "calendarAllowance": "Plan dzienny",
-    "calendarCovered": "Pokryte przez plan dzienny"
+    "calendarCovered": "Pokryte przez plan dzienny",
+    "simulateTitle": "Symuluj zakup",
+    "simulateHint": "Zobacz, jak zakup zmieni kolejne miesiące, zanim go zrobisz. Nic nie jest zapisywane.",
+    "purchaseDescription": "Co",
+    "purchaseDescriptionPlaceholder": "Rower",
+    "purchaseAmount": "Kwota łączna",
+    "purchaseInstallments": "Raty",
+    "purchaseFirstDate": "Pierwsza rata",
+    "simulate": "Symuluj",
+    "clearSimulation": "Wyczyść",
+    "withoutPurchase": "Bez",
+    "withPurchase": "Z zakupem",
+    "lowestBalance": "Najniższe saldo",
+    "savingsTitle": "Ile oszczędzasz",
+    "savingsHint": "Prognozowane saldo w danym dniu w porównaniu z dzisiaj.",
+    "savingsUntil": "Do",
+    "savingsBalance": "Saldo w dniu {{date}}",
+    "savingsDelta": "{{amount}} w porównaniu z dzisiaj"
   }
 }

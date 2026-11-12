@@ -10,7 +10,12 @@ from app.core.workspace_context import (
     current_workspace,
     current_writable_workspace,
 )
-from app.schemas.spending_plan import SpendingPlanRead, SpendingPlanTimeline, SpendingPlanWrite
+from app.schemas.spending_plan import (
+    SpendingPlanRead,
+    SpendingPlanSimulation,
+    SpendingPlanTimeline,
+    SpendingPlanWrite,
+)
 from app.services import spending_plan_service
 
 router = APIRouter(prefix="/api/spending-plan", tags=["spending-plan"])
@@ -49,4 +54,16 @@ async def get_spending_plan_timeline(
 ):
     return await spending_plan_service.get_timeline(
         session, ctx.workspace.id, ctx.user_id, daily_allowance
+    )
+
+
+@router.post("/simulate", response_model=SpendingPlanTimeline)
+async def simulate_spending_plan(
+    data: SpendingPlanSimulation,
+    ctx: WorkspaceContext = Depends(current_workspace),
+    session: AsyncSession = Depends(get_async_session),
+):
+    """The timeline as it would look after the given purchases. Saves nothing."""
+    return await spending_plan_service.get_timeline(
+        session, ctx.workspace.id, ctx.user_id, data.daily_allowance, data.purchases
     )

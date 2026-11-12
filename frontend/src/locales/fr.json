@@ -3151,6 +3151,23 @@
     "remove": "Supprimer le plan",
     "removed": "Plan supprimé",
     "calendarAllowance": "Plan quotidien",
-    "calendarCovered": "Couvert par le plan quotidien"
+    "calendarCovered": "Couvert par le plan quotidien",
+    "simulateTitle": "Simuler un achat",
+    "simulateHint": "Voyez comment un achat change les mois à venir avant de le faire. Rien n'est enregistré.",
+    "purchaseDescription": "Quoi",
+    "purchaseDescriptionPlaceholder": "Vélo",
+    "purchaseAmount": "Montant total",
+    "purchaseInstallments": "Mensualités",
+    "purchaseFirstDate": "Première mensualité",
+    "simulate": "Simuler",
+    "clearSimulation": "Effacer",
+    "withoutPurchase": "Sans",
+    "withPurchase": "Avec l'achat",
+    "lowestBalance": "Solde le plus bas",
+    "savingsTitle": "Ce que vous épargnez",
+    "savingsHint": "Le solde projeté à une date, comparé à aujourd'hui.",
+    "savingsUntil": "Jusqu'au",
+    "savingsBalance": "Solde au {{date}}",
+    "savingsDelta": "{{amount}} par rapport à aujourd'hui"
   }
 }

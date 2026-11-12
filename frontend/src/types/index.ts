@@ -785,6 +785,13 @@ export interface SpendingPlanInput {
   horizon_months: number
 }
 
+export interface SimulatedPurchase {
+  description?: string
+  amount: number
+  installments: number
+  first_date: string
+}
+
 export interface SpendingPlanTimeline {
   currency: string
   daily_allowance: number

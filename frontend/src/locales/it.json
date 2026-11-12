@@ -3151,6 +3151,23 @@
     "remove": "Rimuovi piano",
     "removed": "Piano rimosso",
     "calendarAllowance": "Piano giornaliero",
-    "calendarCovered": "Coperto dal piano giornaliero"
+    "calendarCovered": "Coperto dal piano giornaliero",
+    "simulateTitle": "Simula un acquisto",
+    "simulateHint": "Guarda come un acquisto cambia i prossimi mesi prima di farlo. Non viene salvato nulla.",
+    "purchaseDescription": "Cosa",
+    "purchaseDescriptionPlaceholder": "Bicicletta",
+    "purchaseAmount": "Importo totale",
+    "purchaseInstallments": "Rate",
+    "purchaseFirstDate": "Prima rata",
+    "simulate": "Simula",
+    "clearSimulation": "Cancella",
+    "withoutPurchase": "Senza",
+    "withPurchase": "Con l'acquisto",
+    "lowestBalance": "Saldo più basso",
+    "savingsTitle": "Quanto risparmi",
+    "savingsHint": "Il saldo previsto a una data, rispetto a oggi.",
+    "savingsUntil": "Fino al",
+    "savingsBalance": "Saldo al {{date}}",
+    "savingsDelta": "{{amount}} rispetto a oggi"
   }
 }

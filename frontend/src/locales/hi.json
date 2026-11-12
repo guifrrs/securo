@@ -3147,6 +3147,23 @@
     "remove": "योजना हटाएँ",
     "removed": "योजना हटाई गई",
     "calendarAllowance": "दैनिक योजना",
-    "calendarCovered": "दैनिक योजना से कवर"
+    "calendarCovered": "दैनिक योजना से कवर",
+    "simulateTitle": "खरीदारी का अनुमान लगाएँ",
+    "simulateHint": "खरीदने से पहले देखें कि कोई खरीदारी आने वाले महीनों को कैसे बदलती है। कुछ भी सेव नहीं होता।",
+    "purchaseDescription": "क्या",
+    "purchaseDescriptionPlaceholder": "साइकिल",
+    "purchaseAmount": "कुल राशि",
+    "purchaseInstallments": "किस्तें",
+    "purchaseFirstDate": "पहली किस्त",
+    "simulate": "अनुमान लगाएँ",
+    "clearSimulation": "साफ़ करें",
+    "withoutPurchase": "इसके बिना",
+    "withPurchase": "खरीदारी के साथ",
+    "lowestBalance": "सबसे कम शेष राशि",
+    "savingsTitle": "आप कितना बचाते हैं",
+    "savingsHint": "किसी तारीख पर अनुमानित शेष राशि, आज की तुलना में।",
+    "savingsUntil": "तक",
+    "savingsBalance": "{{date}} को शेष राशि",
+    "savingsDelta": "आज की तुलना में {{amount}}"
   }
 }

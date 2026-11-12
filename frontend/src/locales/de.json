@@ -3148,6 +3148,23 @@
     "remove": "Plan entfernen",
     "removed": "Plan entfernt",
     "calendarAllowance": "Tagesplan",
-    "calendarCovered": "Vom Tagesplan gedeckt"
+    "calendarCovered": "Vom Tagesplan gedeckt",
+    "simulateTitle": "Kauf simulieren",
+    "simulateHint": "Sieh vor dem Kauf, wie er die nächsten Monate verändert. Nichts wird gespeichert.",
+    "purchaseDescription": "Was",
+    "purchaseDescriptionPlaceholder": "Fahrrad",
+    "purchaseAmount": "Gesamtbetrag",
+    "purchaseInstallments": "Raten",
+    "purchaseFirstDate": "Erste Rate",
+    "simulate": "Simulieren",
+    "clearSimulation": "Zurücksetzen",
+    "withoutPurchase": "Ohne",
+    "withPurchase": "Mit dem Kauf",
+    "lowestBalance": "Niedrigster Saldo",
+    "savingsTitle": "Wie viel du sparst",
+    "savingsHint": "Der prognostizierte Saldo an einem Datum im Vergleich zu heute.",
+    "savingsUntil": "Bis",
+    "savingsBalance": "Saldo am {{date}}",
+    "savingsDelta": "{{amount}} im Vergleich zu heute"
   }
 }

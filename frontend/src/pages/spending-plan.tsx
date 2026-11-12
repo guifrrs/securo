@@ -21,11 +21,11 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
-import { coverageLabel, formatPlanDate } from '@/lib/spending-plan'
+import { balanceOn, coverageLabel, defaultSavingsDate, formatPlanDate, lowestBalance } from '@/lib/spending-plan'
 import { usePrivacyMode } from '@/hooks/use-privacy-mode'
 import { useDateLocale, useDisplayLocale } from '@/hooks/use-display-locale'
 import { cn } from '@/lib/utils'
-import type { SpendingPlan, SpendingPlanInput } from '@/types'
+import type { SimulatedPurchase, SpendingPlan, SpendingPlanInput, SpendingPlanTimeline } from '@/types'
 
 const SELECT_CLASS = 'w-full border border-border rounded-lg px-3 py-2 text-sm bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-primary'
 const HORIZONS = [6, 12, 18, 24, 36]
@@ -79,6 +79,20 @@ function SpendingPlanEditor({ plan }: { plan: SpendingPlan | null }) {
     placeholderData: (previous) => previous,
   })
 
+  // A purchase being tried out. Only a submitted one is simulated, so typing
+  // in the form does not fire a request per keystroke.
+  const [purchaseForm, setPurchaseForm] = useState({ description: '', amount: '', installments: '1', firstDate: '' })
+  const [simulated, setSimulated] = useState<SimulatedPurchase | null>(null)
+  const { data: scenario } = useQuery({
+    queryKey: ['dashboard', 'spending-plan', 'simulate', previewAllowance, simulated],
+    queryFn: () => spendingPlanApi.simulate([simulated as SimulatedPurchase], previewAllowance),
+    enabled: simulated !== null,
+    placeholderData: (previous) => previous,
+  })
+  const activeScenario = simulated ? scenario : undefined
+
+  const [savingsDate, setSavingsDate] = useState('')
+
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ['spending-plan'] })
     queryClient.invalidateQueries({ queryKey: ['dashboard', 'spending-plan'] })
@@ -114,8 +128,29 @@ function SpendingPlanEditor({ plan }: { plan: SpendingPlan | null }) {
 
   const currency = timeline?.currency ?? 'BRL'
   const money = (value: number) => mask(formatCurrency(value, currency, locale))
-  const chartData = timeline?.points ?? []
   const floor = timeline?.balance_floor ?? 0
+  const scenarioByDate = new Map(activeScenario?.points.map((point) => [point.date, point.balance]) ?? [])
+  const chartData = (timeline?.points ?? []).map((point) => ({
+    ...point,
+    scenario: scenarioByDate.get(point.date),
+  }))
+  const today = timeline?.points[0]?.date ?? ''
+  const savingsTarget = timeline
+    ? (savingsDate && savingsDate >= today && savingsDate <= timeline.horizon_end
+      ? savingsDate
+      : defaultSavingsDate(today, timeline.horizon_end))
+    : ''
+
+  const runSimulation = () => {
+    const amount = parseAmount(purchaseForm.amount)
+    if (amount <= 0) return
+    setSimulated({
+      description: purchaseForm.description || undefined,
+      amount,
+      installments: Math.min(120, Math.max(1, Math.round(Number(purchaseForm.installments) || 1))),
+      first_date: purchaseForm.firstDate || today,
+    })
+  }
 
   return (
     <div>
@@ -202,11 +237,137 @@ function SpendingPlanEditor({ plan }: { plan: SpendingPlan | null }) {
                   dot={false}
                   isAnimationActive={false}
                 />
+                {activeScenario && (
+                  <Area
+                    type="monotone"
+                    dataKey="scenario"
+                    name={t('spendingPlan.withPurchase')}
+                    stroke="#F59E0B"
+                    strokeDasharray="5 4"
+                    fill="none"
+                    strokeWidth={2}
+                    dot={false}
+                    isAnimationActive={false}
+                  />
+                )}
               </AreaChart>
             </ResponsiveContainer>
           )}
         </div>
       </div>
+
+      {timeline && (
+        <div className="grid gap-4 lg:grid-cols-2 mb-6">
+          <form
+            className="bg-card rounded-xl border border-border shadow-sm p-4 space-y-3"
+            onSubmit={(event) => {
+              event.preventDefault()
+              runSimulation()
+            }}
+          >
+            <div>
+              <p className="text-sm font-semibold text-foreground">{t('spendingPlan.simulateTitle')}</p>
+              <p className="text-xs text-muted-foreground">{t('spendingPlan.simulateHint')}</p>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-1.5 sm:col-span-2">
+                <Label htmlFor="sim-description">{t('spendingPlan.purchaseDescription')}</Label>
+                <Input
+                  id="sim-description"
+                  value={purchaseForm.description}
+                  placeholder={t('spendingPlan.purchaseDescriptionPlaceholder')}
+                  onChange={(event) => setPurchaseForm((form) => ({ ...form, description: event.target.value }))}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="sim-amount">{t('spendingPlan.purchaseAmount')}</Label>
+                <Input
+                  id="sim-amount"
+                  inputMode="decimal"
+                  placeholder="0"
+                  value={purchaseForm.amount}
+                  onChange={(event) => setPurchaseForm((form) => ({ ...form, amount: event.target.value }))}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="sim-installments">{t('spendingPlan.purchaseInstallments')}</Label>
+                <Input
+                  id="sim-installments"
+                  type="number"
+                  min={1}
+                  max={120}
+                  value={purchaseForm.installments}
+                  onChange={(event) => setPurchaseForm((form) => ({ ...form, installments: event.target.value }))}
+                />
+              </div>
+              <div className="space-y-1.5 sm:col-span-2">
+                <Label htmlFor="sim-first-date">{t('spendingPlan.purchaseFirstDate')}</Label>
+                <Input
+                  id="sim-first-date"
+                  type="date"
+                  min={today}
+                  max={timeline.horizon_end}
+                  value={purchaseForm.firstDate || today}
+                  onChange={(event) => setPurchaseForm((form) => ({ ...form, firstDate: event.target.value }))}
+                />
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <Button type="submit" size="sm" disabled={parseAmount(purchaseForm.amount) <= 0}>
+                {t('spendingPlan.simulate')}
+              </Button>
+              {simulated && (
+                <Button type="button" size="sm" variant="outline" onClick={() => setSimulated(null)}>
+                  {t('spendingPlan.clearSimulation')}
+                </Button>
+              )}
+            </div>
+            {activeScenario && (
+              <ScenarioComparison
+                without={timeline}
+                withPurchase={activeScenario}
+                savingsTarget={savingsTarget}
+                money={money}
+                dateLocale={dateLocale}
+              />
+            )}
+          </form>
+
+          <div className="bg-card rounded-xl border border-border shadow-sm p-4 space-y-3">
+            <div>
+              <p className="text-sm font-semibold text-foreground">{t('spendingPlan.savingsTitle')}</p>
+              <p className="text-xs text-muted-foreground">{t('spendingPlan.savingsHint')}</p>
+            </div>
+            <div className="space-y-1.5 max-w-xs">
+              <Label htmlFor="savings-date">{t('spendingPlan.savingsUntil')}</Label>
+              <Input
+                id="savings-date"
+                type="date"
+                min={today}
+                max={timeline.horizon_end}
+                value={savingsTarget}
+                onChange={(event) => setSavingsDate(event.target.value)}
+              />
+            </div>
+            <SavingsReadout
+              label={activeScenario ? t('spendingPlan.withoutPurchase') : null}
+              timeline={timeline}
+              target={savingsTarget}
+              money={money}
+              dateLocale={dateLocale}
+            />
+            {activeScenario && (
+              <SavingsReadout
+                label={t('spendingPlan.withPurchase')}
+                timeline={activeScenario}
+                target={savingsTarget}
+                money={money}
+                dateLocale={dateLocale}
+              />
+            )}
+          </div>
+        </div>
+      )}
 
       <form
         className="bg-card rounded-xl border border-border shadow-sm p-4 space-y-4 max-w-2xl"
@@ -340,5 +501,91 @@ function Stat({
         </>
       )}
     </div>
+  )
+}
+
+function SavingsReadout({
+  label,
+  timeline,
+  target,
+  money,
+  dateLocale,
+}: {
+  label: string | null
+  timeline: SpendingPlanTimeline
+  target: string
+  money: (value: number) => string
+  dateLocale: string
+}) {
+  const { t } = useTranslation()
+  const start = timeline.points[0]?.balance ?? 0
+  const end = balanceOn(timeline.points, target)
+  if (end === null) return null
+  const delta = end - start
+  return (
+    <div className="rounded-lg bg-muted/30 px-3 py-2">
+      {label && <p className="text-xs font-medium text-muted-foreground">{label}</p>}
+      <p className="text-sm text-foreground">
+        {t('spendingPlan.savingsBalance', { date: formatPlanDate(target, dateLocale) })}:{' '}
+        <span className="font-semibold tabular-nums">{money(end)}</span>
+      </p>
+      <p className={cn('text-xs tabular-nums', delta >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-500')}>
+        {t('spendingPlan.savingsDelta', { amount: `${delta >= 0 ? '+' : '−'}${money(Math.abs(delta))}` })}
+      </p>
+    </div>
+  )
+}
+
+function ScenarioComparison({
+  without,
+  withPurchase,
+  savingsTarget,
+  money,
+  dateLocale,
+}: {
+  without: SpendingPlanTimeline
+  withPurchase: SpendingPlanTimeline
+  savingsTarget: string
+  money: (value: number) => string
+  dateLocale: string
+}) {
+  const { t } = useTranslation()
+  const lowest = (timeline: SpendingPlanTimeline) => {
+    const value = lowestBalance(timeline.points)
+    return value === null ? '—' : money(value)
+  }
+  const onTarget = (timeline: SpendingPlanTimeline) => {
+    const value = balanceOn(timeline.points, savingsTarget)
+    return value === null ? '—' : money(value)
+  }
+  const rows: [string, string, string][] = [
+    [t('spendingPlan.coverageLabel'), coverageLabel(without, dateLocale, t), coverageLabel(withPurchase, dateLocale, t)],
+    [t('spendingPlan.safeLabel'), money(without.safe_daily_allowance), money(withPurchase.safe_daily_allowance)],
+    [t('spendingPlan.lowestBalance'), lowest(without), lowest(withPurchase)],
+    [
+      t('spendingPlan.savingsBalance', { date: formatPlanDate(savingsTarget, dateLocale) }),
+      onTarget(without),
+      onTarget(withPurchase),
+    ],
+  ]
+  return (
+    <table className="w-full text-xs">
+      <thead>
+        <tr className="text-muted-foreground">
+          <th className="text-left font-medium py-1"><span className="sr-only">{t('spendingPlan.simulateTitle')}</span></th>
+          <th className="text-right font-medium py-1">{t('spendingPlan.withoutPurchase')}</th>
+          <th className="text-right font-medium py-1 text-amber-600 dark:text-amber-400">{t('spendingPlan.withPurchase')}</th>
+        </tr>
+      </thead>
+      <tbody className="divide-y divide-border">
+        {rows.map(([label, before, after]) => (
+          <tr key={label}>
+            <td className="py-1.5 pr-2 text-muted-foreground">{label}</td>
+            <td className="py-1.5 text-right tabular-nums">{before}</td>
+            <td className="py-1.5 text-right tabular-nums font-medium">{after}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
   )
 }

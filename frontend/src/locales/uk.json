@@ -3166,6 +3166,23 @@
     "remove": "Видалити план",
     "removed": "План видалено",
     "calendarAllowance": "Денний план",
-    "calendarCovered": "Покрито денним планом"
+    "calendarCovered": "Покрито денним планом",
+    "simulateTitle": "Змоделювати покупку",
+    "simulateHint": "Подивіться, як покупка змінить найближчі місяці, ще до того як її зробити. Нічого не зберігається.",
+    "purchaseDescription": "Що",
+    "purchaseDescriptionPlaceholder": "Велосипед",
+    "purchaseAmount": "Загальна сума",
+    "purchaseInstallments": "Платежі",
+    "purchaseFirstDate": "Перший платіж",
+    "simulate": "Змоделювати",
+    "clearSimulation": "Очистити",
+    "withoutPurchase": "Без",
+    "withPurchase": "З покупкою",
+    "lowestBalance": "Найнижчий баланс",
+    "savingsTitle": "Скільки ви накопичите",
+    "savingsHint": "Прогнозний баланс на дату порівняно з сьогоднішнім.",
+    "savingsUntil": "До",
+    "savingsBalance": "Баланс на {{date}}",
+    "savingsDelta": "{{amount}} порівняно з сьогодні"
   }
 }

@@ -3147,6 +3147,23 @@
     "remove": "プランを削除",
     "removed": "プランを削除しました",
     "calendarAllowance": "デイリープラン",
-    "calendarCovered": "デイリープランでカバー"
+    "calendarCovered": "デイリープランでカバー",
+    "simulateTitle": "購入をシミュレーション",
+    "simulateHint": "購入する前に、今後の数か月がどう変わるかを確認できます。何も保存されません。",
+    "purchaseDescription": "内容",
+    "purchaseDescriptionPlaceholder": "自転車",
+    "purchaseAmount": "合計金額",
+    "purchaseInstallments": "分割回数",
+    "purchaseFirstDate": "初回の支払日",
+    "simulate": "シミュレーション",
+    "clearSimulation": "クリア",
+    "withoutPurchase": "なし",
+    "withPurchase": "購入した場合",
+    "lowestBalance": "最低残高",
+    "savingsTitle": "貯まる金額",
+    "savingsHint": "指定日の予測残高（今日との比較）。",
+    "savingsUntil": "期日",
+    "savingsBalance": "{{date}} の残高",
+    "savingsDelta": "今日と比べて {{amount}}"
   }
 }
