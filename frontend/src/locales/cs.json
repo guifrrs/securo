@@ -3288,13 +3288,11 @@
     "safeLabel": "Bezpečná denní částka",
     "safeCaption": "Udrží zůstatek nad minimem do {{date}}",
     "coverageLabel": "Pokrytí",
-    "coverageCaption": "Zůstatek zůstává alespoň {{floor}}",
     "coveredUntil": "Pokryto do {{date}}",
     "coveredThrough": "Pokryto po celý plán, do {{date}}",
     "notCovered": "Dnes pod minimem",
     "chartTitle": "Předpokládaný zůstatek",
     "balance": "Zůstatek",
-    "settings": "Nastavení plánu",
     "dailyAllowance": "Denní částka",
     "useSafe": "Použít bezpečnou částku ({{amount}})",
     "balanceFloor": "Minimální zůstatek",
@@ -3303,8 +3301,6 @@
     "months": "Měsíce: {{count}}",
     "accounts": "Účty",
     "accountsHint": "Peníze, ze kterých plán utrácí. Úvěry jsou ve výchozím stavu vynechány.",
-    "previewHint": "Graf ukazuje denní částku už při psaní. Uložením použijete minimum, období a účty.",
-    "save": "Uložit plán",
     "saved": "Plán uložen",
     "remove": "Odebrat plán",
     "removed": "Plán odebrán",
@@ -3326,6 +3322,11 @@
     "savingsHint": "Předpokládaný zůstatek k datu ve srovnání s dneškem.",
     "savingsUntil": "Do",
     "savingsBalance": "Zůstatek k {{date}}",
-    "savingsDelta": "{{amount}} oproti dnešku"
+    "savingsDelta": "{{amount}} oproti dnešku",
+    "editPlan": "Upravit plán",
+    "createPlan": "Vytvořit plán",
+    "noPlan": "Zatím nemáte denní plán.",
+    "noPlanSuggestion": "S vašimi čísly můžete utrácet až {{amount}} denně a zůstat pokryti do {{date}}.",
+    "coveredWholePlan": "Po celý plán"
   }
 }

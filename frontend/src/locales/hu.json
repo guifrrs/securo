@@ -3126,13 +3126,11 @@
     "safeLabel": "Biztonságos napi összeg",
     "safeCaption": "{{date}} napig a minimum felett tartja az egyenleget",
     "coverageLabel": "Fedezet",
-    "coverageCaption": "Az egyenleg legalább {{floor}} marad",
     "coveredUntil": "Fedezve eddig: {{date}}",
     "coveredThrough": "A teljes tervre fedezve, eddig: {{date}}",
     "notCovered": "Ma a minimum alatt",
     "chartTitle": "Előre jelzett egyenleg",
     "balance": "Egyenleg",
-    "settings": "Terv beállításai",
     "dailyAllowance": "Napi összeg",
     "useSafe": "Biztonságos összeg használata ({{amount}})",
     "balanceFloor": "Egyenleg minimuma",
@@ -3141,8 +3139,6 @@
     "months": "{{count}} hónap",
     "accounts": "Számlák",
     "accountsHint": "A pénz, amiből a terv költ. A hitelek alapértelmezetten kimaradnak.",
-    "previewHint": "A grafikon gépelés közben mutatja a napi összeget. Mentsd el a minimum, az időszak és a számlák alkalmazásához.",
-    "save": "Terv mentése",
     "saved": "Terv mentve",
     "remove": "Terv törlése",
     "removed": "Terv törölve",
@@ -3164,6 +3160,11 @@
     "savingsHint": "Az előre jelzett egyenleg egy adott napon, a maihoz képest.",
     "savingsUntil": "Eddig",
     "savingsBalance": "Egyenleg ekkor: {{date}}",
-    "savingsDelta": "{{amount}} a maihoz képest"
+    "savingsDelta": "{{amount}} a maihoz képest",
+    "editPlan": "Terv szerkesztése",
+    "createPlan": "Terv létrehozása",
+    "noPlan": "Még nincs napi terved.",
+    "noPlanSuggestion": "A számaid alapján naponta legfeljebb {{amount}} összeget költhetsz, és fedezve maradsz eddig: {{date}}.",
+    "coveredWholePlan": "A teljes tervre"
   }
 }

@@ -3128,13 +3128,11 @@
     "safeLabel": "Veilig dagbedrag",
     "safeCaption": "Houdt het saldo tot {{date}} boven de ondergrens",
     "coverageLabel": "Dekking",
-    "coverageCaption": "Saldo blijft op of boven {{floor}}",
     "coveredUntil": "Gedekt tot {{date}}",
     "coveredThrough": "Gedekt voor het hele plan, tot {{date}}",
     "notCovered": "Vandaag onder de ondergrens",
     "chartTitle": "Verwacht saldo",
     "balance": "Saldo",
-    "settings": "Planinstellingen",
     "dailyAllowance": "Dagbedrag",
     "useSafe": "Gebruik het veilige bedrag ({{amount}})",
     "balanceFloor": "Ondergrens saldo",
@@ -3143,8 +3141,6 @@
     "months": "{{count}} maanden",
     "accounts": "Rekeningen",
     "accountsHint": "Het geld waaruit het plan uitgeeft. Leningen vallen standaard buiten het plan.",
-    "previewHint": "De grafiek toont het dagbedrag al tijdens het typen. Sla op om ondergrens, periode en rekeningen toe te passen.",
-    "save": "Plan opslaan",
     "saved": "Plan opgeslagen",
     "remove": "Plan verwijderen",
     "removed": "Plan verwijderd",
@@ -3166,6 +3162,11 @@
     "savingsHint": "Het verwachte saldo op een datum, vergeleken met vandaag.",
     "savingsUntil": "Tot",
     "savingsBalance": "Saldo op {{date}}",
-    "savingsDelta": "{{amount}} ten opzichte van vandaag"
+    "savingsDelta": "{{amount}} ten opzichte van vandaag",
+    "editPlan": "Plan bewerken",
+    "createPlan": "Plan maken",
+    "noPlan": "Je hebt nog geen dagplan.",
+    "noPlanSuggestion": "Met jouw cijfers kun je tot {{amount}} per dag uitgeven en blijf je gedekt tot {{date}}.",
+    "coveredWholePlan": "Voor het hele plan"
   }
 }

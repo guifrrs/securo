@@ -3238,13 +3238,11 @@
     "safeLabel": "Bezpieczna kwota dzienna",
     "safeCaption": "Utrzymuje saldo powyżej progu do {{date}}",
     "coverageLabel": "Pokrycie",
-    "coverageCaption": "Saldo nie spada poniżej {{floor}}",
     "coveredUntil": "Pokryte do {{date}}",
     "coveredThrough": "Pokryte przez cały plan, do {{date}}",
     "notCovered": "Dziś poniżej progu",
     "chartTitle": "Prognozowane saldo",
     "balance": "Saldo",
-    "settings": "Ustawienia planu",
     "dailyAllowance": "Kwota dzienna",
     "useSafe": "Użyj bezpiecznej kwoty ({{amount}})",
     "balanceFloor": "Próg salda",
@@ -3253,8 +3251,6 @@
     "months": "Miesiące: {{count}}",
     "accounts": "Konta",
     "accountsHint": "Pieniądze, z których wydaje plan. Kredyty są domyślnie pominięte.",
-    "previewHint": "Wykres pokazuje kwotę dzienną podczas wpisywania. Zapisz, aby zastosować próg, okres i konta.",
-    "save": "Zapisz plan",
     "saved": "Plan zapisany",
     "remove": "Usuń plan",
     "removed": "Plan usunięty",
@@ -3276,6 +3272,11 @@
     "savingsHint": "Prognozowane saldo w danym dniu w porównaniu z dzisiaj.",
     "savingsUntil": "Do",
     "savingsBalance": "Saldo w dniu {{date}}",
-    "savingsDelta": "{{amount}} w porównaniu z dzisiaj"
+    "savingsDelta": "{{amount}} w porównaniu z dzisiaj",
+    "editPlan": "Edytuj plan",
+    "createPlan": "Utwórz plan",
+    "noPlan": "Nie masz jeszcze planu dziennego.",
+    "noPlanSuggestion": "Przy Twoich liczbach możesz wydawać do {{amount}} dziennie i mieć pokrycie do {{date}}.",
+    "coveredWholePlan": "Przez cały plan"
   }
 }

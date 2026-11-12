@@ -3127,13 +3127,11 @@
     "safeLabel": "Sicherer Tagesbetrag",
     "safeCaption": "Hält den Saldo bis {{date}} über der Untergrenze",
     "coverageLabel": "Deckung",
-    "coverageCaption": "Saldo bleibt bei mindestens {{floor}}",
     "coveredUntil": "Gedeckt bis {{date}}",
     "coveredThrough": "Für den ganzen Plan gedeckt, bis {{date}}",
     "notCovered": "Heute unter der Untergrenze",
     "chartTitle": "Prognostizierter Saldo",
     "balance": "Saldo",
-    "settings": "Planeinstellungen",
     "dailyAllowance": "Tagesbetrag",
     "useSafe": "Sicheren Betrag verwenden ({{amount}})",
     "balanceFloor": "Saldo-Untergrenze",
@@ -3142,8 +3140,6 @@
     "months": "{{count}} Monate",
     "accounts": "Konten",
     "accountsHint": "Das Geld, aus dem der Plan ausgibt. Kredite sind standardmäßig ausgeschlossen.",
-    "previewHint": "Das Diagramm zeigt den Tagesbetrag schon beim Tippen. Speichern, um Untergrenze, Zeitraum und Konten zu übernehmen.",
-    "save": "Plan speichern",
     "saved": "Plan gespeichert",
     "remove": "Plan entfernen",
     "removed": "Plan entfernt",
@@ -3165,6 +3161,11 @@
     "savingsHint": "Der prognostizierte Saldo an einem Datum im Vergleich zu heute.",
     "savingsUntil": "Bis",
     "savingsBalance": "Saldo am {{date}}",
-    "savingsDelta": "{{amount}} im Vergleich zu heute"
+    "savingsDelta": "{{amount}} im Vergleich zu heute",
+    "editPlan": "Plan bearbeiten",
+    "createPlan": "Plan erstellen",
+    "noPlan": "Du hast noch keinen Tagesplan.",
+    "noPlanSuggestion": "Mit deinen Zahlen kannst du bis zu {{amount}} pro Tag ausgeben und bleibst bis {{date}} gedeckt.",
+    "coveredWholePlan": "Für den ganzen Plan"
   }
 }

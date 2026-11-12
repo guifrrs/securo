@@ -3130,13 +3130,11 @@
     "safeLabel": "Gasto diario seguro",
     "safeCaption": "Mantiene el saldo por encima del mínimo hasta el {{date}}",
     "coverageLabel": "Cobertura",
-    "coverageCaption": "Saldo igual o superior a {{floor}}",
     "coveredUntil": "Cubierto hasta el {{date}}",
     "coveredThrough": "Cubierto durante todo el plan, hasta el {{date}}",
     "notCovered": "Por debajo del mínimo hoy",
     "chartTitle": "Saldo proyectado",
     "balance": "Saldo",
-    "settings": "Ajustes del plan",
     "dailyAllowance": "Gasto diario",
     "useSafe": "Usar el importe seguro ({{amount}})",
     "balanceFloor": "Saldo mínimo",
@@ -3145,8 +3143,6 @@
     "months": "{{count}} meses",
     "accounts": "Cuentas",
     "accountsHint": "El dinero del que gasta el plan. Los préstamos quedan fuera por defecto.",
-    "previewHint": "El gráfico muestra el gasto diario mientras escribes. Guarda para aplicar el mínimo, el periodo y las cuentas.",
-    "save": "Guardar plan",
     "saved": "Plan guardado",
     "remove": "Eliminar plan",
     "removed": "Plan eliminado",
@@ -3168,6 +3164,11 @@
     "savingsHint": "El saldo proyectado en una fecha, comparado con hoy.",
     "savingsUntil": "Hasta",
     "savingsBalance": "Saldo el {{date}}",
-    "savingsDelta": "{{amount}} respecto a hoy"
+    "savingsDelta": "{{amount}} respecto a hoy",
+    "editPlan": "Editar plan",
+    "createPlan": "Crear plan",
+    "noPlan": "Todavía no tienes un plan diario.",
+    "noPlanSuggestion": "Con tus números puedes gastar hasta {{amount}} al día y seguir cubierto hasta el {{date}}.",
+    "coveredWholePlan": "Durante todo el plan"
   }
 }

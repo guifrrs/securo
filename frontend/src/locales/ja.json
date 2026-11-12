@@ -3126,13 +3126,11 @@
     "safeLabel": "安全な1日あたりの金額",
     "safeCaption": "{{date}} まで残高を下限以上に保てます",
     "coverageLabel": "カバー期間",
-    "coverageCaption": "残高は {{floor}} 以上を維持",
     "coveredUntil": "{{date}} までカバー",
     "coveredThrough": "プラン全期間をカバー（{{date}} まで）",
     "notCovered": "今日すでに下限を下回っています",
     "chartTitle": "予測残高",
     "balance": "残高",
-    "settings": "プランの設定",
     "dailyAllowance": "1日あたりの金額",
     "useSafe": "安全な金額を使う（{{amount}}）",
     "balanceFloor": "残高の下限",
@@ -3141,8 +3139,6 @@
     "months": "{{count}} か月",
     "accounts": "口座",
     "accountsHint": "プランが支出に使うお金。ローンは既定で除外されます。",
-    "previewHint": "入力中の1日あたりの金額がグラフに反映されます。下限・期間・口座は保存すると適用されます。",
-    "save": "プランを保存",
     "saved": "プランを保存しました",
     "remove": "プランを削除",
     "removed": "プランを削除しました",
@@ -3164,6 +3160,11 @@
     "savingsHint": "指定日の予測残高（今日との比較）。",
     "savingsUntil": "期日",
     "savingsBalance": "{{date}} の残高",
-    "savingsDelta": "今日と比べて {{amount}}"
+    "savingsDelta": "今日と比べて {{amount}}",
+    "editPlan": "プランを編集",
+    "createPlan": "プランを作成",
+    "noPlan": "まだデイリープランがありません。",
+    "noPlanSuggestion": "今の数字なら1日 {{amount}} まで使っても {{date}} までカバーされます。",
+    "coveredWholePlan": "プラン全期間"
   }
 }

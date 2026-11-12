@@ -3130,13 +3130,11 @@
     "safeLabel": "Importo giornaliero sicuro",
     "safeCaption": "Mantiene il saldo sopra la soglia fino al {{date}}",
     "coverageLabel": "Copertura",
-    "coverageCaption": "Saldo pari o superiore a {{floor}}",
     "coveredUntil": "Coperto fino al {{date}}",
     "coveredThrough": "Coperto per tutto il piano, fino al {{date}}",
     "notCovered": "Sotto la soglia oggi",
     "chartTitle": "Saldo previsto",
     "balance": "Saldo",
-    "settings": "Impostazioni del piano",
     "dailyAllowance": "Importo giornaliero",
     "useSafe": "Usa l'importo sicuro ({{amount}})",
     "balanceFloor": "Soglia del saldo",
@@ -3145,8 +3143,6 @@
     "months": "{{count}} mesi",
     "accounts": "Conti",
     "accountsHint": "I soldi da cui il piano spende. I prestiti sono esclusi per impostazione predefinita.",
-    "previewHint": "Il grafico mostra l'importo giornaliero mentre scrivi. Salva per applicare soglia, periodo e conti.",
-    "save": "Salva piano",
     "saved": "Piano salvato",
     "remove": "Rimuovi piano",
     "removed": "Piano rimosso",
@@ -3168,6 +3164,11 @@
     "savingsHint": "Il saldo previsto a una data, rispetto a oggi.",
     "savingsUntil": "Fino al",
     "savingsBalance": "Saldo al {{date}}",
-    "savingsDelta": "{{amount}} rispetto a oggi"
+    "savingsDelta": "{{amount}} rispetto a oggi",
+    "editPlan": "Modifica piano",
+    "createPlan": "Crea piano",
+    "noPlan": "Non hai ancora un piano giornaliero.",
+    "noPlanSuggestion": "Con i tuoi numeri puoi spendere fino a {{amount}} al giorno e restare coperto fino al {{date}}.",
+    "coveredWholePlan": "Per tutto il piano"
   }
 }

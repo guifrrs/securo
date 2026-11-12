@@ -3126,13 +3126,11 @@
     "safeLabel": "Safe daily amount",
     "safeCaption": "Keeps the balance above the floor until {{date}}",
     "coverageLabel": "Coverage",
-    "coverageCaption": "Balance stays at or above {{floor}}",
     "coveredUntil": "Covered until {{date}}",
     "coveredThrough": "Covered for the whole plan, until {{date}}",
     "notCovered": "Below the floor today",
     "chartTitle": "Projected balance",
     "balance": "Balance",
-    "settings": "Plan settings",
     "dailyAllowance": "Daily amount",
     "useSafe": "Use the safe amount ({{amount}})",
     "balanceFloor": "Balance floor",
@@ -3141,8 +3139,6 @@
     "months": "{{count}} months",
     "accounts": "Accounts",
     "accountsHint": "The money the plan spends from. Loans stay out by default.",
-    "previewHint": "The chart previews the daily amount as you type. Save to apply the floor, period and accounts.",
-    "save": "Save plan",
     "saved": "Plan saved",
     "remove": "Remove plan",
     "removed": "Plan removed",
@@ -3164,6 +3160,11 @@
     "savingsHint": "The projected balance on a date, compared with today.",
     "savingsUntil": "Until",
     "savingsBalance": "Balance on {{date}}",
-    "savingsDelta": "{{amount}} compared with today"
+    "savingsDelta": "{{amount}} compared with today",
+    "editPlan": "Edit plan",
+    "createPlan": "Create plan",
+    "noPlan": "You don't have a daily plan yet.",
+    "noPlanSuggestion": "With your numbers you can spend up to {{amount}} a day and stay covered until {{date}}.",
+    "coveredWholePlan": "For the whole plan"
   }
 }

@@ -3130,13 +3130,11 @@
     "safeLabel": "Montant quotidien sûr",
     "safeCaption": "Garde le solde au-dessus du plancher jusqu'au {{date}}",
     "coverageLabel": "Couverture",
-    "coverageCaption": "Solde égal ou supérieur à {{floor}}",
     "coveredUntil": "Couvert jusqu'au {{date}}",
     "coveredThrough": "Couvert pendant tout le plan, jusqu'au {{date}}",
     "notCovered": "Sous le plancher aujourd'hui",
     "chartTitle": "Solde projeté",
     "balance": "Solde",
-    "settings": "Réglages du plan",
     "dailyAllowance": "Montant quotidien",
     "useSafe": "Utiliser le montant sûr ({{amount}})",
     "balanceFloor": "Plancher du solde",
@@ -3145,8 +3143,6 @@
     "months": "{{count}} mois",
     "accounts": "Comptes",
     "accountsHint": "L'argent sur lequel le plan dépense. Les prêts sont exclus par défaut.",
-    "previewHint": "Le graphique prévisualise le montant quotidien pendant la saisie. Enregistrez pour appliquer le plancher, la période et les comptes.",
-    "save": "Enregistrer le plan",
     "saved": "Plan enregistré",
     "remove": "Supprimer le plan",
     "removed": "Plan supprimé",
@@ -3168,6 +3164,11 @@
     "savingsHint": "Le solde projeté à une date, comparé à aujourd'hui.",
     "savingsUntil": "Jusqu'au",
     "savingsBalance": "Solde au {{date}}",
-    "savingsDelta": "{{amount}} par rapport à aujourd'hui"
+    "savingsDelta": "{{amount}} par rapport à aujourd'hui",
+    "editPlan": "Modifier le plan",
+    "createPlan": "Créer un plan",
+    "noPlan": "Vous n'avez pas encore de plan quotidien.",
+    "noPlanSuggestion": "Avec vos chiffres, vous pouvez dépenser jusqu'à {{amount}} par jour et rester couvert jusqu'au {{date}}.",
+    "coveredWholePlan": "Pendant tout le plan"
   }
 }
