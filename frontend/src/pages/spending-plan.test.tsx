@@ -27,6 +27,7 @@ function timeline(overrides: Partial<SpendingPlanTimeline> = {}): SpendingPlanTi
     balance_floor: 200,
     horizon_end: '2027-11-12',
     safe_daily_allowance: 28.11,
+    average_daily_surplus: 275.5,
     covered_until: '2026-12-02',
     covered_through_horizon: false,
     today: { allowance: 30, spent: 10, remaining: 20 },
@@ -57,6 +58,7 @@ describe('SpendingPlanPage', () => {
     expect(screen.getByText('$10.00 spent of $30.00')).toBeInTheDocument()
     expect(screen.getByText('$28.11')).toBeInTheDocument()
     expect(screen.getByText('Dec 2, 2026')).toBeInTheDocument()
+    expect(screen.getByText('$275.50')).toBeInTheDocument()
   })
 
   it('saves every field typed in the dialog, not just the last one', async () => {

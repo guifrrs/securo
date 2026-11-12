@@ -219,6 +219,8 @@ async def get_timeline(
     spent = await variable_spent_on(session, workspace_id, primary_currency, today, scope)
     points = walk(base, today, allowance, spent)
     last_covered = covered_until(points, today, floor)
+    untouched = walk(base, today, 0.0, spent)
+    average_surplus = (untouched[-1].balance - untouched[0].balance) / max(1, len(untouched) - 1)
 
     return SpendingPlanTimeline(
         currency=primary_currency,
@@ -226,6 +228,7 @@ async def get_timeline(
         balance_floor=floor,
         horizon_end=horizon_end,
         safe_daily_allowance=safe_daily_allowance(base, today, floor, spent),
+        average_daily_surplus=round(average_surplus, 2),
         covered_until=last_covered,
         covered_through_horizon=last_covered == horizon_end,
         today=SpendingPlanToday(

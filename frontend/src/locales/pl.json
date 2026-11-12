@@ -3276,7 +3276,9 @@
     "editPlan": "Edytuj plan",
     "createPlan": "Utwórz plan",
     "noPlan": "Nie masz jeszcze planu dziennego.",
-    "noPlanSuggestion": "Przy Twoich liczbach możesz wydawać do {{amount}} dziennie i mieć pokrycie do {{date}}.",
-    "coveredWholePlan": "Przez cały plan"
+    "noPlanSuggestion": "Po rachunkach zostaje średnio {{surplus}} dziennie. Aby każdy dzień do {{date}} był pokryty, wydawaj najwyżej {{amount}} dziennie.",
+    "surplusLabel": "Średnio zostaje dziennie",
+    "surplusCaption": "Przed wydatkami dziennymi",
+    "floorCaption": "Próg {{floor}} · {{horizon}}"
   }
 }

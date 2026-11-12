@@ -23,6 +23,7 @@ function timeline(overrides: Partial<SpendingPlanTimeline>): SpendingPlanTimelin
     balance_floor: 0,
     horizon_end: '2027-11-12',
     safe_daily_allowance: 61.2,
+    average_daily_surplus: 80,
     covered_until: '2027-03-05',
     covered_through_horizon: false,
     today: { allowance: 50, spent: 12.5, remaining: 37.5 },

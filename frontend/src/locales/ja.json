@@ -3164,7 +3164,9 @@
     "editPlan": "プランを編集",
     "createPlan": "プランを作成",
     "noPlan": "まだデイリープランがありません。",
-    "noPlanSuggestion": "今の数字なら1日 {{amount}} まで使っても {{date}} までカバーされます。",
-    "coveredWholePlan": "プラン全期間"
+    "noPlanSuggestion": "請求の支払い後、1日平均 {{surplus}} が残ります。{{date}} まで毎日カバーするには、1日 {{amount}} までにしましょう。",
+    "surplusLabel": "1日あたりの平均残り",
+    "surplusCaption": "日々の支出の前",
+    "floorCaption": "下限 {{floor}} · {{horizon}}"
   }
 }

@@ -798,6 +798,7 @@ export interface SpendingPlanTimeline {
   balance_floor: number
   horizon_end: string
   safe_daily_allowance: number
+  average_daily_surplus: number
   covered_until: string | null
   covered_through_horizon: boolean
   today: { allowance: number; spent: number; remaining: number }

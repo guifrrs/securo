@@ -3164,7 +3164,9 @@
     "editPlan": "Edit plan",
     "createPlan": "Create plan",
     "noPlan": "You don't have a daily plan yet.",
-    "noPlanSuggestion": "With your numbers you can spend up to {{amount}} a day and stay covered until {{date}}.",
-    "coveredWholePlan": "For the whole plan"
+    "noPlanSuggestion": "On average {{surplus}} a day is left after bills. To keep every day covered until {{date}}, spend at most {{amount}} a day.",
+    "surplusLabel": "Average left per day",
+    "surplusCaption": "Before any daily spending",
+    "floorCaption": "Floor {{floor}} · {{horizon}}"
   }
 }

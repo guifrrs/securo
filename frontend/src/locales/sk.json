@@ -3310,7 +3310,9 @@
     "editPlan": "Upraviť plán",
     "createPlan": "Vytvoriť plán",
     "noPlan": "Zatiaľ nemáte denný plán.",
-    "noPlanSuggestion": "S vašimi číslami môžete míňať až {{amount}} denne a zostať pokrytí do {{date}}.",
-    "coveredWholePlan": "Počas celého plánu"
+    "noPlanSuggestion": "Po účtoch zostáva v priemere {{surplus}} denne. Aby bol každý deň do {{date}} pokrytý, míňajte najviac {{amount}} denne.",
+    "surplusLabel": "Priemerne zostáva denne",
+    "surplusCaption": "Pred dennými výdavkami",
+    "floorCaption": "Minimum {{floor}} · {{horizon}}"
   }
 }

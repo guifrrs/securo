@@ -3164,7 +3164,9 @@
     "editPlan": "Terv szerkesztése",
     "createPlan": "Terv létrehozása",
     "noPlan": "Még nincs napi terved.",
-    "noPlanSuggestion": "A számaid alapján naponta legfeljebb {{amount}} összeget költhetsz, és fedezve maradsz eddig: {{date}}.",
-    "coveredWholePlan": "A teljes tervre"
+    "noPlanSuggestion": "A számlák után átlagosan {{surplus}} marad naponta. Hogy minden nap fedezve legyen eddig: {{date}}, naponta legfeljebb {{amount}} összeget költs.",
+    "surplusLabel": "Átlagosan marad naponta",
+    "surplusCaption": "A napi költés előtt",
+    "floorCaption": "Minimum {{floor}} · {{horizon}}"
   }
 }

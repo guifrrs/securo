@@ -13,6 +13,8 @@ from app.models.category import Category
 from app.models.recurring_transaction import RecurringTransaction
 from app.models.transaction import Transaction
 from app.schemas.spending_plan import SimulatedPurchase, SpendingPlanWrite
+from app.services.admin_service import set_app_setting
+from app.services.credit_card_service import compute_effective_date
 from app.services.balance_projection import (
     ProjectionBase,
     covered_until,
@@ -218,6 +220,8 @@ async def test_timeline_previews_an_allowance_without_a_saved_plan(
     assert timeline.points[-1].balance == 1000.0 - days
     assert timeline.safe_daily_allowance == round(int(1000 / days * 100) / 100, 2)
     assert timeline.covered_through_horizon is True
+    # Nothing comes in or goes out, so nothing is left over day to day.
+    assert timeline.average_daily_surplus == 0.0
 
 
 @pytest.mark.asyncio
@@ -329,6 +333,8 @@ async def test_simulation_moves_the_balance_without_saving_anything(
     assert simulated.points[-1].balance == 1800.0
     assert plain.points[-1].balance == 3000.0
     assert simulated.safe_daily_allowance < plain.safe_daily_allowance
+    days = len(simulated.points) - 1
+    assert simulated.average_daily_surplus == round(-1200 / days, 2)
     rows = (await session.execute(select(func.count()).select_from(Transaction))).scalar_one()
     assert rows == 1
 
@@ -346,3 +352,102 @@ async def test_simulate_api_rejects_an_empty_purchase_list(client: AsyncClient, 
 
     assert rejected.status_code == 422
     assert accepted.status_code == 200
+
+
+async def _card_world(session: AsyncSession, user_id, workspace_id):
+    """3000 in checking, a card that closes on the 30th and is due on the 7th,
+    a 500 purchase today and a 100 monthly subscription on the card."""
+    today = app_today()
+    checking = await _checking(session, user_id, workspace_id)
+    card = await _checking(session, user_id, workspace_id, "Card", "credit_card")
+    card.statement_close_day = 30
+    card.payment_due_day = 7
+    subscription = RecurringTransaction(
+        id=uuid.uuid4(),
+        user_id=user_id,
+        workspace_id=workspace_id,
+        account_id=card.id,
+        description="Streaming",
+        amount=Decimal("100"),
+        currency="BRL",
+        type="debit",
+        frequency="monthly",
+        start_date=today + timedelta(days=3),
+        next_occurrence=today + timedelta(days=3),
+    )
+    purchase = _tx(user_id, workspace_id, card.id, 500, "debit", today, description="Shoes")
+    purchase.effective_date = compute_effective_date(today, 30, 7)
+    session.add_all([
+        _tx(user_id, workspace_id, checking.id, 3000, "credit", today - timedelta(days=1),
+            source="opening_balance"),
+        purchase,
+        subscription,
+    ])
+    await session.commit()
+    return purchase.effective_date, compute_effective_date(today + timedelta(days=3), 30, 7)
+
+
+@pytest.mark.asyncio
+async def test_accrual_mode_spends_card_charges_on_the_bill_due_date(
+    session: AsyncSession, test_user, test_workspace
+):
+    await set_app_setting(session, "credit_card_accounting_mode", "accrual")
+    purchase_due, subscription_due = await _card_world(session, test_user.id, test_workspace.id)
+    today = app_today()
+
+    timeline = await get_timeline(session, test_workspace.id, test_user.id, Decimal("0"))
+    balance = {p.date: p.balance for p in timeline.points}
+
+    # The purchase is today's variable spending, but the money only leaves on the due date.
+    assert timeline.today.spent == 500.0
+    assert balance[today] == 3000.0
+    first_drop = min(day for day, value in balance.items() if value < 3000.0)
+    assert first_drop == min(purchase_due, subscription_due)
+    assert balance[purchase_due] - balance[purchase_due - timedelta(days=1)] <= -500.0
+    # The subscription starts in three days but is billed on a later due date.
+    assert subscription_due > today + timedelta(days=3)
+
+
+@pytest.mark.asyncio
+async def test_cash_mode_spends_card_charges_on_the_purchase_date(
+    session: AsyncSession, test_user, test_workspace
+):
+    await set_app_setting(session, "credit_card_accounting_mode", "cash")
+    await _card_world(session, test_user.id, test_workspace.id)
+    today = app_today()
+
+    timeline = await get_timeline(session, test_workspace.id, test_user.id, Decimal("0"))
+    balance = {p.date: p.balance for p in timeline.points}
+
+    assert balance[today] == 2500.0
+    assert balance[today + timedelta(days=3)] == 2400.0
+
+
+@pytest.mark.asyncio
+async def test_a_bill_payment_moves_the_money_on_the_day_it_is_paid(
+    session: AsyncSession, test_user, test_workspace
+):
+    await set_app_setting(session, "credit_card_accounting_mode", "accrual")
+    today = app_today()
+    checking = await _checking(session, test_user.id, test_workspace.id)
+    card = await _checking(session, test_user.id, test_workspace.id, "Card", "credit_card")
+    card.statement_close_day = 30
+    card.payment_due_day = 7
+    pair = uuid.uuid4()
+    paid_from = _tx(test_user.id, test_workspace.id, checking.id, 400, "debit", today,
+                    description="Card bill", transfer_pair_id=pair)
+    paid_into = _tx(test_user.id, test_workspace.id, card.id, 400, "credit", today,
+                    description="Card bill", transfer_pair_id=pair)
+    paid_into.effective_date = compute_effective_date(today, 30, 7)
+    session.add_all([
+        _tx(test_user.id, test_workspace.id, checking.id, 1000, "credit", today - timedelta(days=1),
+            source="opening_balance"),
+        paid_from,
+        paid_into,
+    ])
+    await session.commit()
+
+    timeline = await get_timeline(session, test_workspace.id, test_user.id, Decimal("0"))
+
+    # Both legs land today: the payment nets to zero across the plan's accounts.
+    assert {p.balance for p in timeline.points} == {1000.0}

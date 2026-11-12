@@ -13,7 +13,7 @@ from datetime import date, timedelta
 from decimal import Decimal
 from typing import Literal, Optional, cast
 
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -23,6 +23,8 @@ from app.models.category import Category
 from app.models.recurring_transaction import RecurringTransaction
 from app.models.transaction import Transaction
 from app.schemas.transaction_calendar import TransactionCalendarItem
+from app.services.admin_service import get_credit_card_accounting_mode
+from app.services.credit_card_service import compute_effective_date
 from app.services.dashboard_service import (
     _balance_at,
     _daily_balance_deltas_by_date,
@@ -113,6 +115,11 @@ async def load_projection_base(
     for delta_date, delta in recurring_deltas.items():
         deltas[delta_date] = deltas.get(delta_date, 0.0) + delta
 
+    if await get_credit_card_accounting_mode(session) == "accrual":
+        seed += await _move_card_charges_to_due_dates(
+            session, workspace_id, primary_currency, start, end, account_ids, deltas, recurring_items
+        )
+
     return ProjectionBase(
         start=start,
         end=end,
@@ -121,6 +128,91 @@ async def load_projection_base(
         forecast_rows=forecast_rows,
         recurring_items=recurring_items,
     )
+
+
+def _moves_on_due_date(tx: Transaction) -> bool:
+    """A card charge leaves the money on its bill's due date. A bill payment
+    (a transfer leg) or an opening balance moves the money on its own date."""
+    if tx.transfer_pair_id or tx.source in ("transfer", "opening_balance"):
+        return False
+    return not (tx.category and tx.category.treat_as_transfer)
+
+
+async def _move_card_charges_to_due_dates(
+    session: AsyncSession,
+    workspace_id: uuid.UUID,
+    primary_currency: str,
+    start: date,
+    end: date,
+    account_ids: Optional[list[uuid.UUID]],
+    deltas: dict[date, float],
+    recurring_items: list[tuple[TransactionCalendarItem, float]],
+) -> float:
+    """Re-date card charges from their purchase date to their bill's due date.
+
+    The app's accrual mode (Settings) says a card purchase reaches the money
+    when its bill is due, and the dashboard already buckets it that way. The
+    walk is built from purchase dates, so this moves each card charge that
+    crosses into or within ``[start, end)``: out of the seed or its purchase
+    day, into its due day. Real rows carry their due date in
+    ``effective_date`` (cycle math, the bank's bill, or a manual override);
+    virtual recurring occurrences get it from the card's cycle days.
+
+    Mutates ``deltas`` and returns the change to the seed.
+    """
+    seed_change = 0.0
+
+    def place(day: date, amount: float) -> None:
+        nonlocal seed_change
+        if day < start:
+            seed_change += amount
+        elif day < end:
+            deltas[day] = deltas.get(day, 0.0) + amount
+
+    stmt = (
+        select(Transaction)
+        .join(Account, Transaction.account_id == Account.id)
+        .outerjoin(Category, Transaction.category_id == Category.id)
+        .where(
+            Transaction.workspace_id == workspace_id,
+            Account.type == "credit_card",
+            Account.is_closed == False,  # noqa: E712
+            Transaction.is_ignored == False,  # noqa: E712
+            or_(Transaction.category_id.is_(None), Category.is_ignored == False),  # noqa: E712
+            Transaction.date < end,
+            or_(Transaction.date >= start, Transaction.effective_date >= start),
+            Transaction.effective_date != Transaction.date,
+        )
+        .options(selectinload(Transaction.account), selectinload(Transaction.category))
+    )
+    if account_ids is not None:
+        stmt = stmt.where(Transaction.account_id.in_(account_ids))
+    for tx in (await session.execute(stmt)).scalars():
+        if not _moves_on_due_date(tx):
+            continue
+        amount = await signed_balance_delta_primary(session, tx, primary_currency)
+        place(tx.date, -amount)
+        place(tx.effective_date, amount)
+
+    cards = {
+        account.id: account
+        for account in (await session.execute(
+            select(Account).where(
+                Account.workspace_id == workspace_id,
+                Account.type == "credit_card",
+                *([Account.id.in_(account_ids)] if account_ids is not None else []),
+            )
+        )).scalars()
+    }
+    for item, signed_delta in recurring_items:
+        card = cards.get(item.account_id) if item.account_id else None
+        if card is None or item.is_ignored or item.is_transfer:
+            continue
+        due = compute_effective_date(item.date, card.statement_close_day, card.payment_due_day)
+        if due != item.date:
+            place(item.date, -signed_delta)
+            place(due, signed_delta)
+    return seed_change
 
 
 def allowance_on(day: date, today: date, allowance: float, spent_today: float) -> float:

@@ -3166,7 +3166,9 @@
     "editPlan": "Plan bewerken",
     "createPlan": "Plan maken",
     "noPlan": "Je hebt nog geen dagplan.",
-    "noPlanSuggestion": "Met jouw cijfers kun je tot {{amount}} per dag uitgeven en blijf je gedekt tot {{date}}.",
-    "coveredWholePlan": "Voor het hele plan"
+    "noPlanSuggestion": "Na de rekeningen blijft er gemiddeld {{surplus}} per dag over. Om elke dag tot {{date}} gedekt te blijven, geef je maximaal {{amount}} per dag uit.",
+    "surplusLabel": "Gemiddeld over per dag",
+    "surplusCaption": "Vóór de dagelijkse uitgaven",
+    "floorCaption": "Ondergrens {{floor}} · {{horizon}}"
   }
 }

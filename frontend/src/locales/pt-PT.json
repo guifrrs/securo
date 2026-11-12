@@ -3168,7 +3168,9 @@
     "editPlan": "Editar plano",
     "createPlan": "Criar plano",
     "noPlan": "Ainda não tem um plano diário.",
-    "noPlanSuggestion": "Pelos seus números, pode gastar até {{amount}} por dia e continuar coberto até {{date}}.",
-    "coveredWholePlan": "Durante todo o plano"
+    "noPlanSuggestion": "Depois das contas, sobram em média {{surplus}} por dia. Para todos os dias ficarem cobertos até {{date}}, gaste no máximo {{amount}} por dia.",
+    "surplusLabel": "Sobra média por dia",
+    "surplusCaption": "Antes do gasto diário",
+    "floorCaption": "Mínimo {{floor}} · {{horizon}}"
   }
 }

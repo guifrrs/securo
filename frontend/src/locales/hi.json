@@ -3164,7 +3164,9 @@
     "editPlan": "योजना संपादित करें",
     "createPlan": "योजना बनाएँ",
     "noPlan": "आपकी अभी कोई दैनिक योजना नहीं है।",
-    "noPlanSuggestion": "आपके आँकड़ों के हिसाब से आप हर दिन {{amount}} तक खर्च कर सकते हैं और {{date}} तक कवर रहेंगे।",
-    "coveredWholePlan": "पूरी योजना के लिए"
+    "noPlanSuggestion": "बिलों के बाद औसतन हर दिन {{surplus}} बचता है। {{date}} तक हर दिन कवर रहने के लिए हर दिन ज़्यादा से ज़्यादा {{amount}} खर्च करें।",
+    "surplusLabel": "औसतन प्रति दिन बचता है",
+    "surplusCaption": "दैनिक खर्च से पहले",
+    "floorCaption": "न्यूनतम {{floor}} · {{horizon}}"
   }
 }

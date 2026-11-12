@@ -3168,7 +3168,9 @@
     "editPlan": "Modifica piano",
     "createPlan": "Crea piano",
     "noPlan": "Non hai ancora un piano giornaliero.",
-    "noPlanSuggestion": "Con i tuoi numeri puoi spendere fino a {{amount}} al giorno e restare coperto fino al {{date}}.",
-    "coveredWholePlan": "Per tutto il piano"
+    "noPlanSuggestion": "Dopo le bollette avanzano in media {{surplus}} al giorno. Per restare coperto ogni giorno fino al {{date}}, spendi al massimo {{amount}} al giorno.",
+    "surplusLabel": "Avanzo medio al giorno",
+    "surplusCaption": "Prima della spesa giornaliera",
+    "floorCaption": "Soglia {{floor}} · {{horizon}}"
   }
 }

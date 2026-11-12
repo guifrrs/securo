@@ -3326,7 +3326,9 @@
     "editPlan": "Upravit plán",
     "createPlan": "Vytvořit plán",
     "noPlan": "Zatím nemáte denní plán.",
-    "noPlanSuggestion": "S vašimi čísly můžete utrácet až {{amount}} denně a zůstat pokryti do {{date}}.",
-    "coveredWholePlan": "Po celý plán"
+    "noPlanSuggestion": "Po účtech zbývá v průměru {{surplus}} denně. Aby byl každý den do {{date}} pokrytý, utrácejte nejvýše {{amount}} denně.",
+    "surplusLabel": "Průměrně zbývá denně",
+    "surplusCaption": "Před denními výdaji",
+    "floorCaption": "Minimum {{floor}} · {{horizon}}"
   }
 }

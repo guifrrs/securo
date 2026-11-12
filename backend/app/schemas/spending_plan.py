@@ -53,6 +53,9 @@ class SpendingPlanTimeline(BaseModel):
     #: Largest daily allowance that keeps every day through the horizon at or
     #: above the floor.
     safe_daily_allowance: float
+    #: How much the balance grows per day on average through the horizon when
+    #: nothing beyond bills and planned rows is spent: what is left to spend.
+    average_daily_surplus: float
     #: Last day the balance stays at or above the floor. None when today is
     #: already below it.
     covered_until: Optional[_Date] = None

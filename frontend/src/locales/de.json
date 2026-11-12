@@ -3165,7 +3165,9 @@
     "editPlan": "Plan bearbeiten",
     "createPlan": "Plan erstellen",
     "noPlan": "Du hast noch keinen Tagesplan.",
-    "noPlanSuggestion": "Mit deinen Zahlen kannst du bis zu {{amount}} pro Tag ausgeben und bleibst bis {{date}} gedeckt.",
-    "coveredWholePlan": "Für den ganzen Plan"
+    "noPlanSuggestion": "Nach den Rechnungen bleiben im Schnitt {{surplus}} pro Tag. Damit jeder Tag bis {{date}} gedeckt ist, gib höchstens {{amount}} pro Tag aus.",
+    "surplusLabel": "Durchschnittlich übrig pro Tag",
+    "surplusCaption": "Vor den täglichen Ausgaben",
+    "floorCaption": "Untergrenze {{floor}} · {{horizon}}"
   }
 }

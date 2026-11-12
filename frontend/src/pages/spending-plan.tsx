@@ -139,6 +139,7 @@ export default function SpendingPlanPage() {
               <p className="text-sm text-muted-foreground">{t('spendingPlan.intro')}</p>
               <p className="text-sm text-foreground">
                 {t('spendingPlan.noPlanSuggestion', {
+                  surplus: money(timeline.average_daily_surplus),
                   amount: money(timeline.safe_daily_allowance),
                   date: formatPlanDate(timeline.horizon_end, dateLocale),
                 })}
@@ -259,6 +260,13 @@ function PlanHero({
         <Indicator label={t('spendingPlan.dailyAllowance')} value={money(Number(plan.daily_allowance))} />
         <Indicator
           className={divider}
+          label={t('spendingPlan.surplusLabel')}
+          value={money(timeline.average_daily_surplus)}
+          caption={t('spendingPlan.surplusCaption')}
+          tone={timeline.average_daily_surplus < 0 ? 'bad' : 'neutral'}
+        />
+        <Indicator
+          className={divider}
           label={t('spendingPlan.safeLabel')}
           value={money(timeline.safe_daily_allowance)}
           caption={t('spendingPlan.safeCaption', { date: formatPlanDate(timeline.horizon_end, dateLocale) })}
@@ -269,14 +277,11 @@ function PlanHero({
           value={timeline.covered_until
             ? formatPlanDate(timeline.covered_until, dateLocale)
             : t('spendingPlan.notCovered')}
-          caption={timeline.covered_through_horizon ? t('spendingPlan.coveredWholePlan') : undefined}
+          caption={t('spendingPlan.floorCaption', {
+            floor: money(timeline.balance_floor),
+            horizon: t('spendingPlan.months', { count: plan.horizon_months }),
+          })}
           tone={covered ? 'good' : 'bad'}
-        />
-        <Indicator
-          className={divider}
-          label={t('spendingPlan.balanceFloor')}
-          value={money(timeline.balance_floor)}
-          caption={t('spendingPlan.months', { count: plan.horizon_months })}
         />
       </div>
     </div>

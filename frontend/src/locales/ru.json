@@ -3183,7 +3183,9 @@
     "editPlan": "Изменить план",
     "createPlan": "Создать план",
     "noPlan": "У вас пока нет дневного плана.",
-    "noPlanSuggestion": "С вашими цифрами можно тратить до {{amount}} в день и оставаться в покрытии до {{date}}.",
-    "coveredWholePlan": "На весь план"
+    "noPlanSuggestion": "После счетов в среднем остаётся {{surplus}} в день. Чтобы каждый день до {{date}} был покрыт, тратьте не больше {{amount}} в день.",
+    "surplusLabel": "В среднем остаётся в день",
+    "surplusCaption": "До ежедневных трат",
+    "floorCaption": "Минимум {{floor}} · {{horizon}}"
   }
 }
