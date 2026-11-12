@@ -13,6 +13,7 @@ export const MODULE_IDS = [
   'reports',
   'assets',
   'budgets',
+  'spending_plan',
   'goals',
   'recurring',
   'categories',

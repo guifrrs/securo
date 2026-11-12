@@ -37,6 +37,7 @@ from app.models.invoice_attachment import InvoiceAttachment
 from app.models.invoice_schedule import InvoiceSchedule, InvoiceScheduleTerm
 from app.models.mortgage_payment_allocation import MortgagePaymentAllocation
 from app.models.product import Product, ProductPrice
+from app.models.spending_plan import SpendingPlan
 from app.models.reconciliation import (
     ReconciliationEvent,
     ReconciliationRule,
@@ -63,6 +64,7 @@ __all__ = [
     "Rule",
     "RecurringTransaction",
     "Budget",
+    "SpendingPlan",
     "ImportLog",
     "Asset",
     "AssetGroup",

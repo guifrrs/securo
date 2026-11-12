@@ -754,6 +754,7 @@ export interface TransactionCalendarDay {
   projected_income: number
   projected_expense: number
   projected_transfer_net: number
+  projected_allowance?: number
   actual_count: number
   projected_count: number
   has_income: boolean
@@ -767,6 +768,33 @@ export interface TransactionCalendarResponse {
   currency: string
   account_ids: string[] | null
   days: TransactionCalendarDay[]
+  spending_plan_applied?: boolean
+}
+
+export interface SpendingPlan {
+  daily_allowance: string
+  balance_floor: string
+  account_ids: string[] | null
+  horizon_months: number
+}
+
+export interface SpendingPlanInput {
+  daily_allowance: number
+  balance_floor: number
+  account_ids: string[] | null
+  horizon_months: number
+}
+
+export interface SpendingPlanTimeline {
+  currency: string
+  daily_allowance: number
+  balance_floor: number
+  horizon_end: string
+  safe_daily_allowance: number
+  covered_until: string | null
+  covered_through_horizon: boolean
+  today: { allowance: number; spent: number; remaining: number }
+  points: { date: string; balance: number }[]
 }
 
 export interface DashboardSummary {

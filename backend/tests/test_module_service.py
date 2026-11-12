@@ -32,6 +32,7 @@ PERSONAL_MODULES = [
     "recurring",
     "reports",
     "rules",
+    "spending_plan",
     "split_groups",
     "transactions",
 ]

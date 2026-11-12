@@ -24,6 +24,7 @@ describe('MODULE_IDS', () => {
         'recurring',
         'reports',
         'rules',
+        'spending_plan',
         'split_groups',
         'transactions',
       ].sort(),
