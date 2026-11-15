@@ -5,13 +5,13 @@ on:
     branches: [main]
 
 jobs:
-  pytest-startup:
-    name: pytest ${{ matrix.pyc }} ${{ matrix.rep }}
+  ab:
+    name: ${{ matrix.variant }} ${{ matrix.rep }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        pyc: [cold, precompiled]
+        variant: [before, after, after-nocov]
         rep: [1, 2, 3]
     services:
       postgres:
@@ -32,6 +32,8 @@ jobs:
         working-directory: backend
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ matrix.variant == 'before' && 'fix/ty-main' || 'perf/ci-postgres-template' }}
       - uses: actions/setup-python@v7
         with:
           python-version-file: backend/.python-version
@@ -44,16 +46,12 @@ jobs:
             backend/pyproject.toml
             backend/.python-version
       - run: uv sync --locked --all-extras
-      - run: lscpu | grep -E "Model name|^CPU\(s\)"; free -m | head -2
-      - name: Precompile bytecode
-        if: matrix.pyc == 'precompiled'
-        run: time uv run --no-sync python -m compileall -q -j 0 .venv/lib app tests > /dev/null
-      - name: pytest
+      - run: git log -1 --format=%H; lscpu | grep -E "Model name"
+      - name: timed
         env:
-          PYTHONUNBUFFERED: "1"
           POSTGRES_TEST_URL: postgresql+asyncpg://securo_test:securo_test@127.0.0.1:${{ job.services.postgres.ports['5432'] }}/securo_test
+          COV: ${{ matrix.variant == 'after-nocov' && '-p no:cov' || '--cov=app --cov-report=xml --cov-report=term-missing --cov-fail-under=60' }}
         run: |
-          echo "START $(date -u +%T.%N)"
-          uv run --no-sync pytest -n auto --dist loadfile --cov=app --cov-report=xml --cov-report=term-missing --cov-fail-under=60 -ra -W error 2>&1 \
-            | while IFS= read -r line; do printf '%s %s\n' "$(date -u +%T.%N)" "$line"; done \
-            | grep -E "session starts|created:|\[  1%\]|\[ 50%\]|\[100%\]|passed|failed"
+          pg_files=$(grep -l postgres_sessions tests/test_*.py)
+          s=$(date +%s.%N); uv run --no-sync pytest -q -p no:cacheprovider $pg_files | tail -1; echo "RESULT pg_only_serial $(echo "$(date +%s.%N) - $s" | bc)"
+          s=$(date +%s.%N); uv run --no-sync pytest -n auto --dist loadfile $COV -ra -W error | tail -1; echo "RESULT full_suite $(echo "$(date +%s.%N) - $s" | bc)"
