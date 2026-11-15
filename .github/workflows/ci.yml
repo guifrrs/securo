@@ -79,22 +79,12 @@ jobs:
         if: steps.backend-changes.outputs.run_backend != 'false'
         run: uv run --no-sync ty check .
 
-      - name: Diagnose pytest startup
-        if: steps.backend-changes.outputs.run_backend != 'false'
-        run: |
-          echo "pyc before: $(find .venv -name '*.pyc' | wc -l)"
-          date -u +%T.%N; uv run --no-sync python -X importtime -c "import tests.conftest" 2> importtime.txt; date -u +%T.%N
-          sort -t'|' -k2 -n -r importtime.txt | head -30
-          date -u +%T.%N; uv run --no-sync pytest --collect-only -q -p no:xdist -p no:cov | tail -1; date -u +%T.%N
-          date -u +%T.%N; uv run --no-sync pytest --collect-only -q -p no:xdist --cov=app --cov-report= | tail -1; date -u +%T.%N
-          nproc; free -m
-
       - name: Run tests with coverage
         if: steps.backend-changes.outputs.run_backend != 'false'
         env:
           POSTGRES_TEST_URL: postgresql+asyncpg://securo_test:securo_test@127.0.0.1:${{ job.services.postgres.ports['5432'] }}/securo_test
         run: |
-          uv run --no-sync pytest -n auto --dist loadfile --cov=app --cov-report=xml --cov-report=term-missing --cov-fail-under=60 -ra -W error -v --durations=40
+          uv run --no-sync pytest -n auto --dist loadfile --cov=app --cov-report=xml --cov-report=term-missing --cov-fail-under=60 -ra -W error
 
       - name: Upload coverage report
         if: ${{ always() && steps.backend-changes.outputs.run_backend != 'false' }}

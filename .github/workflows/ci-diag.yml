@@ -1,0 +1,59 @@
+name: CI diag
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  pytest-startup:
+    name: pytest ${{ matrix.pyc }} ${{ matrix.rep }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        pyc: [cold, precompiled]
+        rep: [1, 2, 3]
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: securo_test
+          POSTGRES_PASSWORD: securo_test
+          POSTGRES_DB: securo_test
+        ports:
+          - 5432/tcp
+        options: >-
+          --health-cmd "pg_isready -h 127.0.0.1 -U securo_test -d securo_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version-file: backend/.python-version
+      - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        with:
+          version: "0.12.17"
+          enable-cache: true
+          cache-dependency-glob: |
+            backend/uv.lock
+            backend/pyproject.toml
+            backend/.python-version
+      - run: uv sync --locked --all-extras
+      - run: lscpu | grep -E "Model name|^CPU\(s\)"; free -m | head -2
+      - name: Precompile bytecode
+        if: matrix.pyc == 'precompiled'
+        run: time uv run --no-sync python -m compileall -q -j 0 .venv/lib app tests > /dev/null
+      - name: pytest
+        env:
+          PYTHONUNBUFFERED: "1"
+          POSTGRES_TEST_URL: postgresql+asyncpg://securo_test:securo_test@127.0.0.1:${{ job.services.postgres.ports['5432'] }}/securo_test
+        run: |
+          echo "START $(date -u +%T.%N)"
+          uv run --no-sync pytest -n auto --dist loadfile --cov=app --cov-report=xml --cov-report=term-missing --cov-fail-under=60 -ra -W error 2>&1 \
+            | while IFS= read -r line; do printf '%s %s\n' "$(date -u +%T.%N)" "$line"; done \
+            | grep -E "session starts|created:|\[  1%\]|\[ 50%\]|\[100%\]|passed|failed"
