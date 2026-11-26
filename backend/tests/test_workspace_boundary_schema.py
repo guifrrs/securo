@@ -23,6 +23,8 @@ GLOBAL: dict[str, str] = {
     "app_settings": "instance-wide settings, written by admins",
     "fx_rates": "exchange rates are public facts, shared by every workspace (ADR 0008)",
     "plugin_logos": "images from a public plugin release, kept per commit and shared by every workspace that runs it",
+    "admin_access_log": "an instance-wide record of administrative access to accounts, readable by the account and by workspace owners (ADR 0042)",
+    "admin_access_log_viewer": "who may read one entry of admin_access_log, recorded with it so it survives the account (ADR 0042)",
 }
 
 #: Tables owned by a user across workspaces: their credentials and their own AI keys.
@@ -42,6 +44,7 @@ VIA_PARENT: dict[str, str] = {
     "collection_accounts": "collection_id",
     "collection_asset_groups": "collection_id",
     "institutions": "connection_id",
+    "plugin_connection_routines": "connection_id",
 }
 
 EXEMPT = GLOBAL.keys() | USER_OWNED.keys() | VIA_PARENT.keys()

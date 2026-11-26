@@ -745,6 +745,16 @@
     "email": "Email",
     "password": "Password",
     "forgotPassword": "Password dimenticata?",
+    "forgotPasswordDescription": "Inserisci l'email del tuo account e ti invieremo un link per scegliere una nuova password.",
+    "sendResetLink": "Invia link di recupero",
+    "resetSentTitle": "Controlla la tua email",
+    "resetSentBody": "Se esiste un account per {{email}}, il link di recupero è in arrivo. Scade a breve.",
+    "resetUnavailable": "Il recupero della password via email non è attivo su questa istanza. Chiedi all'amministratore.",
+    "resetRequestError": "Impossibile inviare il link di recupero. Riprova.",
+    "resetPasswordDescription": "Scegli una nuova password per il tuo account.",
+    "resetPasswordRejected": "La nuova password non è stata accettata. Usa almeno 8 caratteri e riprova.",
+    "resetTokenMissing": "Questo link è incompleto. Riapri il link dall'email di recupero o chiedine uno nuovo.",
+    "resetTokenInvalid": "Questo link di recupero non è valido o è scaduto. Chiedine uno nuovo.",
     "loginDescription": "Accedi per usare il tuo account",
     "invalidCredentials": "Email o password non validi",
     "serverError": "Impossibile connettersi al server. Controlla la connessione o che il backend sia in esecuzione e riprova.",
@@ -755,6 +765,8 @@
     "changePassword": "Cambia password",
     "newPassword": "Nuova password",
     "passwordTooShort": "La password deve contenere almeno 8 caratteri",
+    "passwordTooLong": "La password deve contenere al massimo 72 caratteri",
+    "resetPassword": "Reimposta la password",
     "currentPassword": "Password attuale",
     "currentPasswordWrong": "La password attuale non è corretta",
     "passwordChanged": "Password cambiata con successo",
@@ -881,6 +893,9 @@
     "savingsRateCaption": "del reddito di questo mese risparmiato",
     "spendingProjection": "A questo ritmo, spenderai {{amount}} entro fine mese",
     "uncategorizedCta": "{{count}} transazioni da categorizzare",
+    "uncategorizedCta_one": "{{count}} transazione da categorizzare",
+    "uncategorizedCta_many": "{{count}} di transazioni da categorizzare",
+    "uncategorizedCta_other": "{{count}} transazioni da categorizzare",
     "uncategorizedTotal": "{{amount}} in totale",
     "categorizeNow": "Categorizza ora",
     "drillDownQuickCategorize": "Scegli una categoria",
@@ -918,6 +933,7 @@
     "monthNext": "Mese successivo",
     "description": "Descrizione",
     "originalDescription": "Descrizione originale",
+    "providerCategory": "Categoria della banca",
     "restoreOriginalDescription": "Ripristina originale",
     "amount": "Importo",
     "status": "Stato",
@@ -1008,6 +1024,15 @@
     "unflagAction": "Rimuovi contrassegno",
     "flagSuccess": "Transazione contrassegnata",
     "unflagSuccess": "Contrassegno rimosso",
+    "paid": "Pagato",
+    "unpaid": "Non pagato",
+    "onlyUnpaid": "Solo non pagati",
+    "markPaid": "Segna come pagato",
+    "markUnpaid": "Segna come non pagato",
+    "markPaidHint": "Il denaro ha già lasciato il conto o vi è entrato",
+    "markUnpaidHint": "Segna questa riga come ancora da pagare o da incassare",
+    "paidSuccess": "Segnato come pagato",
+    "unpaidSuccess": "Segnato come non pagato",
     "flagFilterAll": "Tutte contrassegnate",
     "flagFilterOverdue": "Scadute",
     "flagFilterSoon": "In scadenza questa settimana",
@@ -1028,11 +1053,33 @@
       "nextWeek": "Tra una settimana",
       "nextMonth": "Tra un mese"
     },
+    "newBadge": "Nuova",
+    "newBadgeTooltip": "Arrivata da sincronizzazione o importazione e non ancora aperta",
+    "onlyUnread": "Solo transazioni nuove",
+    "onlyUnreadShort": "Solo nuove",
+    "unreadRows": "Transazioni nuove",
+    "unreadCount_one": "{{count}} transazione da rivedere",
+    "unreadCount_other": "{{count}} transazioni da rivedere",
+    "unreadCount_zero": "Niente da rivedere",
+    "markAllRead": "Segna tutto come letto in questa area di lavoro ({{count}})",
+    "unreadOutsideFilters": "Fuori da questi filtri: {{count}}",
+    "markAllReadPending": "Segnalazione in corso",
+    "markAllReadDone": "Tutte le transazioni sono segnate come lette",
     "statusCleared": "Contabilizzata",
     "sortAsc": "Ordine crescente",
     "sortDesc": "Ordine decrescente",
     "syncedInfo": "Transazione sincronizzata dalla banca: importo, data e conto non possono essere modificati",
     "syncedAmountDateError": "Non è possibile modificare l'importo o la data di una transazione sincronizzata",
+    "amountErrors": {
+      "notPositive": "L'importo deve essere maggiore di zero.",
+      "tooSmall": "L'importo deve essere almeno 0,01.",
+      "tooLarge": "L'importo è più grande di quanto Securo possa salvare.",
+      "convertedNegative": "L'importo convertito non può essere negativo.",
+      "convertedTooLarge": "L'importo convertito è più grande di quanto Securo possa salvare.",
+      "rateNotPositive": "Il tasso di cambio non può essere negativo. Un tasso pari a zero è accettato solo se l'importo convertito si arrotonda a zero.",
+      "rateTooLarge": "Il tasso di cambio è più grande di quanto Securo possa salvare.",
+      "required": "Inserisci un importo."
+    },
     "uncategorized": "Senza categoria",
     "selected": "selezionate",
     "summaryCount": "{{count}} transazioni",
@@ -1078,7 +1125,7 @@
     "attachmentDeleted": "Allegato eliminato",
     "attachmentDeleteConfirm": "Eliminare questo allegato?",
     "attachmentTooLarge": "Il file è troppo grande. La dimensione massima è 10 MB.",
-    "attachmentTypeNotAllowed": "Tipo di file non supportato. Consentiti: jpg, jpeg, png, webp, gif, heic, pdf",
+    "attachmentTypeNotAllowed": "Tipo di file non supportato. Consentiti: {{types}}",
     "attachmentMaxReached": "Numero massimo di allegati raggiunto",
     "attachmentRenamed": "Allegato rinominato",
     "attachmentRename": "Rinomina",
@@ -1187,8 +1234,9 @@
     "calendarAccountCount": "{{count}} conti",
     "calendarAllAccounts": "Tutti i conti",
     "calendarEndBalance": "Saldo finale",
-    "calendarItemCount": "{{count}} elemento",
-    "calendarItemCount_plural": "{{count}} elementi",
+    "calendarItemCount_one": "{{count}} elemento",
+    "calendarItemCount_other": "{{count}} elementi",
+    "calendarItemCount_many": "{{count}} elementi",
     "calendarProjectedCount": "{{count}} previsto",
     "calendarProjected": "Previsto",
     "projected": "Prevista",
@@ -1208,6 +1256,7 @@
     "calendarActivityTrend": "Attività giornaliera",
     "calendarNoActivity": "Nessuna attività questo mese",
     "calendarNoMovements": "Nessun movimento",
+    "calendarMonthOutOfRange": "Questo mese è troppo lontano da oggi.",
     "calendarActualNet": "Netto effettivo",
     "calendarTransfersExcluded": "I trasferimenti non contano come entrate o spese",
     "invoiceBadge": "Invoice {{number}}",
@@ -1215,7 +1264,8 @@
     "invoiceBadgeTooltip": "Questa transazione salda una fattura. Aprila.",
     "suggestionBadge": "Domanda",
     "suggestionBadgeTooltip": "Un pagamento potrebbe saldare questa fattura. Apri la coda per rispondere.",
-    "clearGroupFilter": "Rimuovi filtro gruppo"
+    "clearGroupFilter": "Rimuovi filtro gruppo",
+    "attachmentNoPreview": "Nessuna anteprima per questo file. Scaricalo per aprirlo."
   },
   "accounts": {
     "title": "Conti",
@@ -1531,6 +1581,9 @@
     "saved": "Budget salvati",
     "budgetFor": "Budget per {{category}}",
     "invalidAmount": "Inserisci un importo valido pari o superiore a zero.",
+    "amountTooSmall": "Il limite del budget deve essere almeno 0,01.",
+    "amountTooLarge": "Il limite del budget è troppo grande.",
+    "amountNegative": "Il limite del budget non può essere negativo.",
     "repeatEveryMonthFor": "Ripeti il budget di {{category}} ogni mese",
     "previousMonth": "Mese precedente",
     "nextMonth": "Mese successivo",
@@ -1628,6 +1681,8 @@
   },
   "recurring": {
     "makeFromTransaction": "Nuova ricorrente da questa transazione",
+    "duplicate": "Esiste già una ricorrente con la stessa descrizione, frequenza e data di inizio",
+    "alreadyLinked": "Questa transazione appartiene già a una ricorrente",
     "title": "Transazioni ricorrenti",
     "add": "Aggiungi ricorrente",
     "edit": "Modifica ricorrente",
@@ -1738,6 +1793,12 @@
     "sectionHint": "Come categorizzare le transazioni.",
     "resetAndReapplyAll": "Reimposta e riapplica",
     "confirmResetAndReapplyAll": "Reimpostare categorie, note e descrizioni gestite dalle regole delle transazioni corrispondenti e riapplicare tutte le regole attive?",
+    "scanForTransfers": "Cerca trasferimenti",
+    "scanningForTransfers": "Ricerca in corso...",
+    "confirmScanForTransfers": "Cercare in tutto lo storico e abbinare i trasferimenti tra conti diversi? I trasferimenti separati a mano possono essere abbinati di nuovo. Su uno storico grande può richiedere un momento.",
+    "transferScanCreated_one": "{{count}} coppia di trasferimenti creata",
+    "transferScanCreated_other": "{{count}} coppie di trasferimenti create",
+    "transferScanNone": "Nessuna nuova coppia di trasferimenti trovata",
     "add": "Aggiungi",
     "created": "Regola creata",
     "createdAndApplied": "Regola creata e applicata a {{count}} transazioni",
@@ -1795,6 +1856,7 @@
     "fieldDate": "Data",
     "fieldStatus": "Stato",
     "fieldProviderCategory": "Categoria del provider",
+    "providerCategoryHint": "L'etichetta della banca stessa, nella sua lingua (ad esempio «Groceries»). Scegline una che l'area di lavoro ha già ricevuto.",
     "opContains": "contiene",
     "opNotContains": "non contiene",
     "opEquals": "uguale a",
@@ -2192,6 +2254,14 @@
     "colReturn": "Rendim.",
     "colBalance": "Saldo",
     "colPortfolioPct": "% portaf.",
+    "colDates": "Periodo",
+    "colAvgBuyPrice": "Prezzo medio acq.",
+    "colAvgSellPrice": "Prezzo medio vend.",
+    "colInvested": "Investito",
+    "colProceeds": "Ricavato",
+    "colResult": "Risultato",
+    "soldRealized": "Realizzato",
+    "soldTotalsTitle": "Risultato realizzato a costo medio, sommato per valuta senza conversione",
     "addBuys": "agg. acquisti",
     "ledgerTitle": "Movimenti",
     "noLedgerYet": "Ancora nessun movimento per questa posizione.",
@@ -2613,6 +2683,7 @@
     "create": "Crea",
     "loading": "Caricamento...",
     "retry": "Riprova",
+    "databaseBusy": "L'istanza ha raggiunto il limite di connessioni al database. Riprova tra un momento.",
     "error": "Errore",
     "success": "Successo",
     "noIconsFound": "Nessuna icona trovata",
@@ -2724,6 +2795,10 @@
     "searchTransaction": "Cerca transazioni per descrizione...",
     "selectedTransaction": "Selezionata",
     "settled": "Saldo registrato",
+    "linkableHint": "Solo la parte di un accredito non ancora rimborsata può essere collegata.",
+    "errorExceedsAmount": "Le liquidazioni collegate a questo accredito supererebbero il suo importo.",
+    "errorOnlyReceiver": "Solo chi riceve il denaro può collegare la transazione in entrata.",
+    "errorReceiverCurrency": "Scegli una tua transazione in entrata nella valuta della liquidazione.",
     "settlements": "Saldi",
     "recordSettlement": "Registra saldo",
     "noSettlements": "Ancora nessun saldo.",
@@ -2743,6 +2818,7 @@
     "shareEqual": "Uguale",
     "shareExact": "Importi esatti",
     "sharePercent": "Percentuali",
+    "shareSettlement": "Rimborso (saldo)",
     "percentSum": "Somma: {{total}}%",
     "amountSum": "Somma: {{total}} / {{target}} {{currency}}",
     "equalHint": "Ogni membro selezionato riceve una quota uguale.",
@@ -2903,6 +2979,33 @@
     "menuItem": "Controlla aggiornamenti"
   },
   "admin": {
+    "email": {
+      "title": "Email",
+      "enabled": "Email attiva",
+      "disabled": "Email disattivata",
+      "description": "Come partono le email di recupero password. Il provider e il mittente vengono dalla configurazione del server.",
+      "disabledNote": "Attiva EMAIL_ENABLED sul server per inviare i link di recupero.",
+      "provider": "Provider",
+      "providerSmtp": "Server SMTP",
+      "providerResend": "Resend",
+      "sender": "Mittente",
+      "senderMissing": "Non impostato",
+      "templatesTitle": "Messaggio di recupero",
+      "templatesDescription": "Quello che legge la persona. Variabili: {app_name}, {link} e {minutes}; {link} deve stare da solo su una riga propria e nient'altro può essere un link.",
+      "subject": "Oggetto",
+      "body": "Corpo",
+      "linkRequired": "Il corpo deve contenere {link}.",
+      "linkInSubject": "L'oggetto non può contenere {link} né un indirizzo.",
+      "linkOnce": "Il corpo deve contenere {link} esattamente una volta.",
+      "linkAlone": "La variabile {link} deve stare da sola sulla propria riga.",
+      "otherLink": "Il messaggio non può portare da nessun'altra parte che a {link}.",
+      "restoreDefault": "Ripristina il testo predefinito",
+      "save": "Salva modelli",
+      "saved": "Modelli salvati",
+      "saveFailed": "Impossibile salvare i modelli",
+      "languageEn": "Inglese",
+      "languagePt": "Portoghese"
+    },
     "users": {
       "title": "Gestione utenti",
       "searchPlaceholder": "Cerca utenti...",
@@ -2922,12 +3025,16 @@
       "deleted": "Utente eliminato",
       "confirmDeleteTitle": "Eliminare l'utente?",
       "confirmDeleteDesc": "Questo eliminerà definitivamente l'utente {{email}} e tutti i suoi dati. Questa azione non può essere annullata.",
-      "resetPassword": "Reimposta password",
-      "resetPasswordPlaceholder": "Lascia vuoto per mantenere l'attuale",
+      "reason": "Motivo",
+      "reasonPlaceholder": "Perché viene fatta questa modifica?",
+      "reasonHint": "Registrato nel registro degli accessi e mostrato all'account interessato.",
       "addDesc": "Crea un nuovo account utente con accesso all'applicazione.",
       "adminRole": "Privilegi di amministratore",
       "enabled": "Attivo",
-      "disabled": "Disattivo"
+      "disabled": "Disattivo",
+      "pending": "In attesa",
+      "pendingEmail": "Richiesto {{email}}, in attesa del titolare",
+      "emailPendingHint": "L'indirizzo cambia solo dopo la conferma del titolare."
     },
     "settings": {
       "title": "Impostazioni amministratore",
@@ -3234,8 +3341,8 @@
     "defaultBadge": "Predefinito",
     "defaultLabel": "Predefinito",
     "globalChat": {
-      "title": "Chat",
-      "openHint": "Apri chat",
+      "title": "Agente",
+      "openHint": "Apri agente",
       "history": "Conversazioni recenti",
       "selectAgent": "Seleziona agente",
       "openSettings": "Impostazioni agente",
@@ -3607,7 +3714,8 @@
       "undoFirstGroupSplit": "Annulla la divisione prima di dividere tra persone.",
       "undoFirstMortgage": "Annulla la divisione prima di aggiungere la ripartizione del mutuo.",
       "categoryInUse": "Questa categoria contiene parti di transazioni divise. Modifica prima quelle divisioni.",
-      "destinationInvalid": "Le parti di transazioni divise non possono passare a una categoria ignorata o nascosta."
+      "destinationInvalid": "Le parti di transazioni divise non possono passare a una categoria ignorata o nascosta.",
+      "mergeNeedsRate": "Questi budget sono in valute diverse e non c'è un tasso di cambio del loro mese per unirli."
     }
   },
   "plugins": {
@@ -3852,9 +3960,26 @@
       "removed": "{{name}} rimossa",
       "copyFailed": "Impossibile copiare. Seleziona l'indirizzo e copialo a mano.",
       "editTitle": "Ricollega {{name}}",
-      "editHint": "Aggiorna ciò che è cambiato, come una nuova password o un token. Poi la connessione si sincronizza di nuovo.",
+      "editHint": "Aggiorna ciò che è cambiato, come una nuova password o un token. Poi la connessione viene eseguita di nuovo.",
+      "edit": "Modifica",
+      "updateKeys": "Aggiorna le chiavi",
       "keepBlank": "Lascia un campo vuoto per mantenere il valore attuale.",
-      "updated": "{{name}} aggiornata"
+      "updated": "{{name}} aggiornata",
+      "routines": "Routine",
+      "routineEvery": "ogni {{interval}}",
+      "routineLastRun": "eseguita {{when}}",
+      "routineNeverRan": "non ancora eseguita",
+      "runRoutine": "Esegui ora",
+      "runRoutineAria": "Esegui {{name}} ora",
+      "routineRan": "{{name}} è stata eseguita",
+      "routineFailed": "Non è stata eseguita.",
+      "fileAccepts": "{{types}}, fino a {{size}} KB",
+      "fileAny": "Qualsiasi file, fino a {{size}} KB",
+      "currentFile": "attuale: {{name}}",
+      "fileSaved": "c'è un file salvato",
+      "fileWrongType": "{{name}} non è un file {{types}}.",
+      "fileTooBig": "{{name}} supera {{size}} KB.",
+      "fileReadFailed": "Impossibile leggere {{name}}."
     },
     "oauth": {
       "title": "Completamento dell'accesso",
@@ -4023,10 +4148,240 @@
     "recurringRevenue": {
       "title": "Entrate ricorrenti",
       "hint": "Quanto portano le fatture ricorrenti ogni mese, e cosa si è perso di recente."
+    },
+    "plugin": {
+      "period": {
+        "year_to_date": "Da inizio anno",
+        "last_12_months": "Ultimi 12 mesi"
+      }
     }
   },
   "offline": {
     "title": "Server non raggiungibile",
     "description": "Sei offline o Securo si sta riavviando. I tuoi dati sono al sicuro e nulla è stato modificato. Ci riconnetteremo automaticamente appena il server risponderà."
+  },
+  "documentAi": {
+    "reading": "Lettura del documento…",
+    "readingHint": "{{model}} lo sta leggendo. Potrebbe volerci un minuto.",
+    "failed": "Non è stato possibile leggere il documento",
+    "retry": "Riprova",
+    "acceptedFormats": "Formati accettati: OFX, CSV, QIF, CAMT, e PDF o foto di un estratto conto",
+    "statement": "Estratto conto",
+    "kindBank": "Estratto conto bancario",
+    "kindCreditCard": "Estratto conto della carta di credito",
+    "period": "Dal {{start}} al {{end}}",
+    "readFromText": "Letto dal testo del PDF da {{model}}",
+    "readFromImages": "Letto dalle immagini da {{model}}",
+    "balanceOk": "Le righe tornano: da {{opening}} a {{closing}}, come indicato nell'estratto conto.",
+    "balanceMismatch": "Le righe sommano {{computed}}, ma l'estratto conto indica {{closing}} (una differenza di {{difference}}). Controlla se mancano righe o ce ne sono di ripetute prima di importare.",
+    "droppedLines_one": "{{count}} riga non è stata letta ed è stata esclusa.",
+    "droppedLines_other": "{{count}} righe non sono state lette e sono state escluse.",
+    "truncated": "Sono state lette solo le prime pagine; il documento ha {{count}} pagine.",
+    "suggestedAccount": "Il conto è stato scelto in base all'ultimo estratto conto con questo layout.",
+    "textOnlyModel": "{{model}} legge solo testo: i PDF con testo funzionano, ma foto e PDF scansionati richiedono un modello che legga le immagini.",
+    "errors": {
+      "not_configured": "La lettura documenti non è configurata in questo workspace. Scegli una connessione LLM nelle impostazioni del workspace, o in Agenti → Connessioni.",
+      "vision_required": "Questo documento è una foto o una scansione, e il modello non legge le immagini. Scegline uno che lo faccia (qwen2.5vl, llama3.2-vision, gpt-4o-mini, Claude) nelle impostazioni del workspace.",
+      "unsupported_file": "Si possono leggere solo file PDF, PNG, JPEG e WebP.",
+      "file_too_large": "Il file è troppo grande.",
+      "encrypted_pdf": "Il PDF è protetto da password. Salva una copia senza password e riprova.",
+      "unreadable_file": "Non è stato possibile aprire il file. Potrebbe essere danneggiato.",
+      "empty_document": "Il documento è vuoto.",
+      "provider_error": "Non è stato possibile raggiungere il modello, oppure ha risposto con un errore.",
+      "provider_auth": "Il provider del modello ha rifiutato la chiave API.",
+      "invalid_response": "Non è stato possibile interpretare la risposta del modello. Riprovare, o usare un modello più grande, di solito aiuta.",
+      "timeout": "La lettura ha richiesto troppo tempo ed è stata interrotta.",
+      "already_confirmed": "Questo documento è già stato utilizzato.",
+      "attachment_refused": "Non è stato possibile allegare il file alla transazione.",
+      "internal_error": "Si è verificato un problema durante la lettura del documento.",
+      "generic": "Non è stato possibile leggere il documento.",
+      "queue_unavailable": "La coda di elaborazione non è disponibile. Riprova tra un momento."
+    },
+    "receipt": {
+      "action": "Leggi ricevuta",
+      "title": "Leggi una ricevuta",
+      "description": "Una foto o un PDF di una ricevuta. Allegala alla transazione che ha pagato, oppure creane una a partire da essa.",
+      "chooseFile": "Scegli un file",
+      "takePhoto": "Scatta una foto",
+      "another": "Usa un altro file",
+      "matchesTitle": "Transazioni a cui questa ricevuta potrebbe appartenere",
+      "hasAttachments_one": "{{count}} allegato",
+      "hasAttachments_other": "{{count}} allegati",
+      "attach": "Allega",
+      "orCreate": "Oppure crea una nuova transazione",
+      "noMatches": "Nessuna transazione corrisponde ancora a questa ricevuta. Creane una:",
+      "create": "Crea transazione",
+      "attached": "Ricevuta allegata",
+      "created": "Transazione creata con la ricevuta allegata",
+      "createdWithoutFile": "Transazione creata, ma non è stato possibile allegare il file. Apri la transazione per allegarlo."
+    },
+    "settings": {
+      "title": "Lettura dei documenti",
+      "description": "La connessione LLM che legge estratti conto, ricevute e allegati in questo workspace, scelta tra le tue connessioni in Agenti.",
+      "current": "Lettura con {{connection}} · {{model}}",
+      "vision_yes": "Legge le immagini: foto e PDF scansionati funzionano.",
+      "vision_no": "Legge solo testo: foto e PDF scansionati richiedono un modello che legga le immagini.",
+      "vision_unknown": "Non è noto se questo modello legga le immagini. Securo proverà e lo segnalerà se non ci riesce.",
+      "visionSource_setting": "come impostato",
+      "visionSource_provider": "indicato dal provider",
+      "visionSource_catalog": "riconosciuto dal nome del modello",
+      "model": "Modello",
+      "readsImages": "Legge le immagini",
+      "visionAuto": "Rileva automaticamente",
+      "visionYes": "Sì",
+      "visionNo": "No, solo testo",
+      "visionHint": "Il rilevamento interroga Ollama, oppure riconosce il nome del modello. Impostalo a mano quando sbaglia un modello.",
+      "privacy": "I documenti vengono inviati al provider di questa connessione. Con Ollama sul tuo server, non lo lasciano mai.",
+      "reset": "Usa i valori predefiniti dell'istanza",
+      "saved": "Impostazioni di lettura dei documenti salvate",
+      "saveError": "Non è stato possibile salvare le impostazioni",
+      "resetDone": "Ripristinati i valori predefiniti dell'istanza",
+      "connection": "Connessione LLM",
+      "off": "Disattivato",
+      "modelPlaceholder": "Il modello della connessione ({{model}})",
+      "manageConnections": "Gestisci connessioni",
+      "noConnections": "Non hai ancora nessuna connessione LLM. Aggiungine una in Agenti per leggere documenti."
+    },
+    "fill": {
+      "read": "Compila da questo file",
+      "reading": "Lettura del file per compilare la transazione…",
+      "filled": "Compilato dal file: {{fields}}",
+      "nothingNew": "Il file non aveva niente di nuovo da compilare."
+    },
+    "agents": {
+      "use": "Usa per leggere documenti",
+      "inUse": "Legge documenti",
+      "stop": "Smetti di leggere documenti",
+      "turnedOn": "{{name}} ora legge i documenti di questo workspace",
+      "turnedOff": "Lettura documenti disattivata"
+    },
+    "unreadPages": "Pagine non lette (scansioni, e il modello non legge immagini): {{pages}}. Le loro righe mancano da questa revisione."
+  },
+  "notifications": {
+    "title": "Notifiche",
+    "unread": "Non letta",
+    "unreadLabel": "Notifiche, {{number}} non lette",
+    "markAllRead": "Segna tutte come lette",
+    "empty": "Nulla richiede la tua attenzione.",
+    "loadError": "Impossibile caricare le notifiche.",
+    "connection": {
+      "title": "{{name}} ha smesso di sincronizzarsi",
+      "rateLimited": "La banca continua a raggiungere il limite giornaliero."
+    },
+    "recurring": {
+      "title": "{{name}} non è stata generata",
+      "detail": "Scadeva il {{date}}. Controlla il conto e le impostazioni."
+    },
+    "budget": {
+      "close": "{{name}}: {{percent}}% del budget usato",
+      "reached": "{{name}}: budget esaurito",
+      "detail": "{{actual}} di {{budget}}"
+    },
+    "backup": {
+      "title": "Backup pianificato non riuscito",
+      "detail": "Ultimo tentativo il {{date}}. Securo riproverà."
+    },
+    "seeAll": "Vedi tutte le notifiche",
+    "markRead": "Segna come letta",
+    "loadMore": "Carica altre",
+    "filter": {
+      "all": "Tutte",
+      "unread": "Non lette"
+    },
+    "emptyFilter": {
+      "all": "Ancora nessuna notifica.",
+      "unread": "Niente altro da leggere."
+    },
+    "flag": {
+      "title": "Promemoria scaduti: {{number}}",
+      "detail": "Transazioni contrassegnate con promemoria passato."
+    },
+    "match": {
+      "title": "Corrispondenze da verificare: {{number}}",
+      "detail": "Securo ha trovato possibili corrispondenze e attende la tua risposta."
+    },
+    "invoice": {
+      "title": "{{name}}: fattura scaduta",
+      "detail": "{{amount}}, scadeva il {{date}}."
+    },
+    "preferences": {
+      "title": "Preferenze",
+      "hint": "Scegli su cosa vuoi essere avvisato in questo spazio. Gli altri membri mantengono le proprie scelte.",
+      "saveError": "Impossibile salvare la tua scelta.",
+      "loadError": "Impossibile caricare le tue preferenze."
+    },
+    "kind": {
+      "connection_error": {
+        "label": "Connessioni",
+        "hint": "Una banca o un plugin ha smesso di sincronizzarsi."
+      },
+      "budget_threshold": {
+        "label": "Budget",
+        "hint": "Un budget ha raggiunto l’80% o il 100%."
+      },
+      "recurring_failed": {
+        "label": "Ricorrenti",
+        "hint": "Una transazione ricorrente non è stata generata."
+      },
+      "flag_overdue": {
+        "label": "Promemoria",
+        "hint": "Una transazione contrassegnata ha superato la data del promemoria."
+      },
+      "reconciliation_pending": {
+        "label": "Corrispondenze da verificare",
+        "hint": "Securo ha trovato possibili corrispondenze e attende la tua risposta."
+      },
+      "invoice_overdue": {
+        "label": "Fatture",
+        "hint": "Una fattura a un cliente è scaduta."
+      },
+      "group_expense": {
+        "label": "Spese condivise",
+        "hint": "Qualcuno aggiunge o modifica una spesa condivisa con te in un gruppo."
+      },
+      "group_settlement": {
+        "label": "Pagamenti nei gruppi",
+        "hint": "Qualcuno registra un pagamento tuo o per te in un gruppo."
+      },
+      "backup_failed": {
+        "label": "Backup",
+        "hint": "Un backup pianificato non è riuscito."
+      }
+    },
+    "group": {
+      "added": "{{actor}} ha aggiunto {{name}}",
+      "changed": "{{actor}} ha modificato {{name}}",
+      "batch": "{{actor}} ha aggiunto spese condivise: {{number}}",
+      "share": "La tua quota in {{group}}: {{amount}}",
+      "paid": "{{actor}} ha registrato un pagamento"
+    }
+  },
+  "accessLog": {
+    "title": "Registro degli accessi",
+    "description": "Ogni azione amministrativa sul tuo account e sui membri degli spazi di lavoro che possiedi.",
+    "empty": "Nessuna azione amministrativa registrata.",
+    "actionUpdate": "Account modificato",
+    "actionDelete": "Account eliminato",
+    "actionOther": "Account modificato",
+    "by": "Da {{email}}",
+    "target": "Account {{email}}",
+    "ip": "IP {{ip}}",
+    "loadMore": "Carica altri",
+    "loadError": "Impossibile caricare il registro degli accessi.",
+    "emailChange": "Indirizzo {{from}} → {{to}}",
+    "emailPending": "in attesa della conferma del titolare dell'account",
+    "otherChanges": "Modificato anche: {{fields}}"
+  },
+  "emailChange": {
+    "title": "Modifica dell'indirizzo email",
+    "description": "Un amministratore ha chiesto di cambiare l'indirizzo del tuo account in {{email}}. Finché non confermi, il tuo account mantiene l'indirizzo attuale.",
+    "accept": "Accetta il nuovo indirizzo",
+    "decline": "Mantieni il mio indirizzo attuale",
+    "accepted": "Il tuo account ora usa {{email}}",
+    "declined": "Il tuo account mantiene l'indirizzo attuale",
+    "unavailable": "Questo indirizzo non è più disponibile",
+    "failed": "Impossibile registrare la tua decisione",
+    "replaced": "L'amministratore ha inviato una nuova richiesta. Controlla il nuovo indirizzo prima di accettare",
+    "withdrawn": "La richiesta è stata ritirata. Il tuo account mantiene l'indirizzo attuale"
   }
 }

@@ -38,6 +38,7 @@ import {
   ChevronsUpDown,
   Download,
   HardDriveDownload,
+  History,
   KeyRound,
   Languages,
   LogOut,
@@ -84,6 +85,8 @@ interface AccountMenuProps {
   onPasskeys: () => void
   /** Trigger a backup download. */
   onBackup: () => void
+  /** Open the access log of the account and of the workspaces it owns. */
+  onAccessLog: () => void
   /** Open the "Update available" dialog. */
   onUpdateAvailable: () => void
   /** True when the AGENTS_ENABLED env flag is on. */
@@ -108,6 +111,7 @@ export function WorkspaceSwitcher({
   onTwoFactor,
   onPasskeys,
   onBackup,
+  onAccessLog,
   onUpdateAvailable,
   agentsEnabled,
   localAuthEnabled,
@@ -251,6 +255,10 @@ export function WorkspaceSwitcher({
           <DropdownMenuItem onClick={onBackup} className="flex items-center gap-2">
             <HardDriveDownload size={14} />
             {t('backup.button')}
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={onAccessLog} className="flex items-center gap-2">
+            <History size={14} />
+            {t('accessLog.title')}
           </DropdownMenuItem>
 
           {agentsEnabled && (

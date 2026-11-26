@@ -23,6 +23,7 @@ import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { IconPicker } from '@/components/icon-picker'
 import { PluginsSection } from '@/components/plugins-section'
+import { DocumentAiSettingsSection } from '@/components/document-ai-settings-section'
 import { useFeatureFlags } from '@/hooks/use-feature-flags'
 import { CategoryIcon } from '@/components/category-icon'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
@@ -81,7 +82,7 @@ export default function WorkspaceSettingsPage() {
   const navigate = useNavigate()
   const localeForFormat = useDateLocale()
   const { current, canManage, workspaces: allWorkspaces, refresh, switchWorkspace } = useWorkspace()
-  const { pluginsEnabled } = useFeatureFlags()
+  const { pluginsEnabled, documentAiEnabled } = useFeatureFlags()
   const { user: currentUser, updateUser } = useAuth()
   const queryClient = useQueryClient()
 
@@ -600,6 +601,8 @@ export default function WorkspaceSettingsPage() {
       {current.kind === 'business' && <AccountantExportSection />}
 
       {pluginsEnabled && <PluginsSection />}
+
+      {documentAiEnabled && canManage && <DocumentAiSettingsSection />}
 
       {/* Danger zone — owners only */}
       {canManage && (

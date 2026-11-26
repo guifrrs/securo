@@ -177,7 +177,7 @@ export function GlobalChatPanel({ open, onOpenChange, initialMessage, onInitialM
             'duration-200',
           )}
         >
-          <DialogPrimitive.Title className="sr-only">{t('agents.globalChat.title', 'Chat')}</DialogPrimitive.Title>
+          <DialogPrimitive.Title className="sr-only">{t('agents.globalChat.title')}</DialogPrimitive.Title>
 
           <header className="flex items-center justify-between gap-2 px-3 py-2 border-b shrink-0">
             <div className="flex items-center gap-1 min-w-0 flex-1">
@@ -243,7 +243,7 @@ export function GlobalChatPanel({ open, onOpenChange, initialMessage, onInitialM
                     aria-hidden
                   />
                   <span className="text-sm font-medium truncate">
-                    {activeAgent?.name ?? t('agents.globalChat.title', 'Chat')}
+                    {activeAgent?.name ?? t('agents.globalChat.title')}
                   </span>
                   {activeAgent?.is_default && (
                     <span className="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-amber-200/70 text-amber-900 dark:bg-amber-900/40 dark:text-amber-200 shrink-0">
