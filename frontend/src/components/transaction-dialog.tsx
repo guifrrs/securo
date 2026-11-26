@@ -817,7 +817,9 @@ function TransactionForm({
   const { enabled: documentAiEnabled, status: documentAiStatus } = useDocumentAiStatus()
   const [readingFile, setReadingFile] = useState(false)
   const formNow = useRef({ description, amount, date, categoryId })
-  formNow.current = { description, amount, date, categoryId }
+  useEffect(() => {
+    formNow.current = { description, amount, date, categoryId }
+  })
   const readCancelled = useRef(false)
   useEffect(() => {
     // Re-armed on every mount: StrictMode mounts twice, and a flag left set by
