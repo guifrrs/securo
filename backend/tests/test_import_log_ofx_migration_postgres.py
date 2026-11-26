@@ -41,7 +41,7 @@ async def session(postgres_sessions):
 
 @pytest.fixture
 def clean_db(postgres_sessions):
-    """The reused user fixture starts in a fresh per-test PostgreSQL schema."""
+    """The reused user fixture starts in a fresh per-test PostgreSQL database."""
 
 
 async def _seed(session, test_user, test_workspace, test_categories) -> None:
@@ -63,12 +63,9 @@ async def _seed(session, test_user, test_workspace, test_categories) -> None:
 
 
 async def _upgrade(session, *, drop_column: bool) -> None:
-    schema = session.bind.get_execution_options()["schema_translate_map"][None]
     conn = await session.connection()
 
     def upgrade(sync_conn) -> None:
-        # The migration's raw SQL bypasses schema_translate_map.
-        sync_conn.exec_driver_sql(f'SET LOCAL search_path TO "{schema}"')
         if drop_column:
             sync_conn.exec_driver_sql("ALTER TABLE import_logs DROP COLUMN ofx_utc_dates")
         with Operations.context(MigrationContext.configure(sync_conn)):

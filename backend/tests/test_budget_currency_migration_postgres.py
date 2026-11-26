@@ -37,7 +37,7 @@ async def session(postgres_sessions):
 
 @pytest.fixture
 def clean_db(postgres_sessions):
-    """The reused user fixture starts in a fresh per-test PostgreSQL schema."""
+    """The reused user fixture starts in a fresh per-test PostgreSQL database."""
 
 
 async def test_each_budget_takes_its_owner_display_currency(
@@ -60,12 +60,9 @@ async def test_each_budget_takes_its_owner_display_currency(
     ])
     await session.flush()
 
-    schema = session.bind.get_execution_options()["schema_translate_map"][None]
     conn = await session.connection()
 
     def upgrade(sync_conn) -> None:
-        # The migration's raw SQL bypasses schema_translate_map.
-        sync_conn.exec_driver_sql(f'SET LOCAL search_path TO "{schema}"')
         with Operations.context(MigrationContext.configure(sync_conn)):
             migration.upgrade()
 
