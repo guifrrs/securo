@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { ArrowLeftRight, CalendarDays, Copy, Download, List, MoreHorizontal, RefreshCw } from 'lucide-react'
+import { ArrowLeftRight, CalendarDays, Copy, Download, List, MoreHorizontal, RefreshCw, ScanText } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { MonthStepper } from '@/components/month-stepper'
 import { TransactionsViewSwitcher, type TransactionsViewSwitcherProps } from '@/components/transactions-view-switcher'
@@ -34,6 +34,8 @@ export type TransactionsPageActionsProps = {
   onAdd?: () => void
   onDuplicate?: () => void
   onTransfer?: () => void
+  /** Read a receipt into a transaction (document reading on). */
+  onScanReceipt?: () => void
   /** Refetch the current list; `refreshing` spins the icon while it runs. */
   onRefresh?: () => void
   refreshing?: boolean
@@ -81,6 +83,12 @@ function DesktopSecondaryActions(props: TransactionsPageActionsProps) {
         <Button variant="outline" onClick={props.onTransfer}>
           <ArrowLeftRight size={16} className="me-1.5" />
           {t('transactions.transfer')}
+        </Button>
+      )}
+      {props.onScanReceipt && (
+        <Button variant="outline" onClick={props.onScanReceipt} data-testid="scan-receipt">
+          <ScanText size={16} className="me-1.5" />
+          {t('documentAi.receipt.action')}
         </Button>
       )}
     </div>
@@ -142,6 +150,12 @@ function MobileSecondaryMenu(props: TransactionsPageActionsProps) {
           <DropdownMenuItem onClick={props.onTransfer}>
             <ArrowLeftRight size={16} className="me-2" />
             {t('transactions.transfer')}
+          </DropdownMenuItem>
+        )}
+        {props.onScanReceipt && (
+          <DropdownMenuItem onClick={props.onScanReceipt}>
+            <ScanText size={16} className="me-2" />
+            {t('documentAi.receipt.action')}
           </DropdownMenuItem>
         )}
       </DropdownMenuContent>

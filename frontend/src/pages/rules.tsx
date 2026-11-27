@@ -9,6 +9,7 @@ import {
   rules as rulesApi,
   accounts as accountsApi,
   payees as payeesApi,
+  connections as connectionsApi,
 } from '@/lib/api'
 import { extractApiError } from '@/lib/api-errors'
 import { invalidateFinancialQueries } from '@/lib/invalidate-queries'
@@ -40,6 +41,7 @@ import {
   Upload,
   Search,
   Power,
+  ArrowLeftRight,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { localized } from '@/lib/localized-text'
@@ -276,6 +278,32 @@ export default function RulesPage() {
     onError: () => toast.error(t('common.error')),
   })
 
+  // The one-time backfill: pairs the transfer rows that entered the books
+  // before the detector ran on arrival. It walks the whole history, so on a
+  // large workspace it is one long request, and the action confirms first.
+  const detectTransfersMutation = useMutation({
+    mutationFn: () => connectionsApi.detectTransfers(),
+    onSuccess: (data) => {
+      invalidateFinancialQueries(queryClient)
+      // The scan files a question for every pair it was not sure about, and
+      // each question writes a "suggested" event to the history. So the
+      // queue, its count on the tab and the history are stale even when no
+      // pair was linked and the toast says nothing was found. Linking a pair
+      // writes only the pair id on the two rows, which is what the money
+      // views above are invalidated for.
+      queryClient.invalidateQueries({ queryKey: ['reconciliation-suggestions'] })
+      queryClient.invalidateQueries({ queryKey: ['reconciliation-history'] })
+      if (data.pairs_created > 0) {
+        toast.success(t('rules.transferScanCreated', { count: data.pairs_created }))
+      } else {
+        toast.success(t('rules.transferScanNone'))
+      }
+    },
+    onError: () => toast.error(t('common.error')),
+  })
+  const scanningTransfers = detectTransfersMutation.isPending
+  const scanTransfersLabel = scanningTransfers ? t('rules.scanningForTransfers') : t('rules.scanForTransfers')
+
   const exportMutation = useMutation({
     mutationFn: () => rulesApi.exportFile(),
     onSuccess: () => toast.success(t('rules.exported')),
@@ -498,6 +526,26 @@ export default function RulesPage() {
                   >
                     <Package size={12} />
                     <span className="hidden sm:inline">{t('rules.packs')}</span>
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5 h-8"
+                    onClick={() => {
+                      if (window.confirm(t('rules.confirmScanForTransfers'))) {
+                        detectTransfersMutation.mutate()
+                      }
+                    }}
+                    disabled={scanningTransfers}
+                    aria-label={scanTransfersLabel}
+                    title={scanTransfersLabel}
+                  >
+                    {scanningTransfers ? (
+                      <RefreshCw size={12} className="animate-spin" />
+                    ) : (
+                      <ArrowLeftRight size={12} />
+                    )}
+                    <span className="hidden sm:inline">{scanTransfersLabel}</span>
                   </Button>
                   <Button
                     variant="outline"

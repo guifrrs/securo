@@ -90,7 +90,7 @@ export function TransactionAttachments({
   })
 
   const allowedExtensions = useMemo(
-    () => attachmentSettings?.allowed_extensions ?? ['jpg', 'jpeg', 'png', 'webp', 'gif', 'heic', 'pdf'],
+    () => attachmentSettings?.allowed_extensions ?? ['jpg', 'jpeg', 'png', 'webp', 'gif', 'heic', 'pdf', 'xml'],
     [attachmentSettings?.allowed_extensions],
   )
   const maxFileSize = (attachmentSettings?.max_file_size_mb ?? 10) * 1024 * 1024
@@ -287,7 +287,7 @@ export function TransactionAttachments({
         }
         const ext = getFileExtension(file.name)
         if (!allowedExtensions.includes(ext)) {
-          toast.error(t('transactions.attachmentTypeNotAllowed'))
+          toast.error(t('transactions.attachmentTypeNotAllowed', { types: allowedExtensions.join(', ') }))
           continue
         }
         if (file.size > maxFileSize) {

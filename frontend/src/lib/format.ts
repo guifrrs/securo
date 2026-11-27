@@ -308,11 +308,17 @@ export function parseAmountInput(value: string, locale = 'en-US'): number | null
  * separator. No grouping: a group separator inside an editable field would
  * read back as noise, and `parseAmountInput` never needs it.
  */
-export function formatAmountInput(value: number, locale = 'en-US', maximumFractionDigits = 2): string {
+export function formatAmountInput(
+  value: number,
+  locale = 'en-US',
+  maximumFractionDigits = 2,
+  minimumFractionDigits = 0,
+): string {
   try {
     return new Intl.NumberFormat(locale, {
       useGrouping: false,
       maximumFractionDigits,
+      minimumFractionDigits,
     }).format(value)
   } catch {
     return value.toFixed(2)

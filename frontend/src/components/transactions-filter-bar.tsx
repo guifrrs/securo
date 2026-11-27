@@ -8,10 +8,12 @@ import {
   Calendar as CalendarIcon,
   Check,
   ChevronRight,
+  CircleDashed,
   Coins,
   CreditCard,
   EyeClosed,
   Flag,
+  Inbox,
   ListChecks,
   ListFilter,
   Search,
@@ -69,10 +71,17 @@ interface TransactionsFilterBarProps {
   onTypeChange: (value: string) => void
   filterStatus: string
   onStatusChange: (value: string) => void
+  /** Only the rows still waiting to be paid (issue #15). */
+  filterUnpaid: boolean
+  onUnpaidChange: (value: boolean) => void
   hideIgnored: boolean
   onHideIgnoredChange: (value: boolean) => void
   filterFlag: FlagFilter
   onFlagFilterChange: (value: FlagFilter) => void
+  onlyUnread: boolean
+  onOnlyUnreadChange: (value: boolean) => void
+  /** Offer the review-queue control at all; the calendar view passes false. */
+  showUnreadFilter?: boolean
   filterFrom: string
   filterTo: string
   onDateRangeChange: (from: string, to: string) => void
@@ -117,10 +126,15 @@ export function TransactionsFilterBar({
   onTypeChange,
   filterStatus,
   onStatusChange,
+  filterUnpaid,
+  onUnpaidChange,
   hideIgnored,
   onHideIgnoredChange,
   filterFlag,
   onFlagFilterChange,
+  onlyUnread,
+  onOnlyUnreadChange,
+  showUnreadFilter = true,
   filterFrom,
   filterTo,
   onDateRangeChange,
@@ -235,8 +249,10 @@ export function TransactionsFilterBar({
     !!filterGroupId ||
     !!filterType ||
     !!filterStatus ||
+    filterUnpaid ||
     hideIgnored ||
     !!filterFlag ||
+    (showUnreadFilter && onlyUnread) ||
     !!filterFrom ||
     !!filterTo ||
     !!filterMinAmount ||
@@ -480,6 +496,8 @@ export function TransactionsFilterBar({
                         status: statusLabel,
                         ignored: hideIgnored ? t('transactions.ignoredHide') : undefined,
                         flagged: flagLabel || undefined,
+                        unpaid: filterUnpaid ? t('transactions.onlyUnpaid') : undefined,
+                        unread: onlyUnread ? t('transactions.onlyUnreadShort') : undefined,
                         date: dateLabel,
                         amount: amountLabel,
                       }}
@@ -496,9 +514,14 @@ export function TransactionsFilterBar({
                       onStatusChange={onStatusChange}
                       hideIgnored={hideIgnored}
                       onHideIgnoredChange={onHideIgnoredChange}
+                      filterUnpaid={filterUnpaid}
+                      onUnpaidChange={onUnpaidChange}
                       flagFilter={filterFlag}
                       flagOptions={flagOptions}
                       onFlagFilterChange={onFlagFilterChange}
+                      onlyUnread={onlyUnread}
+                      onOnlyUnreadChange={onOnlyUnreadChange}
+                      showUnread={showUnreadFilter}
                       onDateRangeChange={onDateRangeChange}
                       onAmountRangeChange={onAmountRangeChange}
                       onApplyAmountRange={applyAmountRange}
@@ -880,6 +903,20 @@ export function TransactionsFilterBar({
                           </DropdownMenuPortal>
                         </DropdownMenuSub>
 
+                        {/* Rows still waiting to be paid (issue #15): a switch, like
+                    hiding ignored rows. */}
+                        <DropdownMenuItem
+                          onSelect={(e) => {
+                            e.preventDefault()
+                            onUnpaidChange(!filterUnpaid)
+                          }}
+                          className="gap-2 text-[13px]"
+                        >
+                          <CircleDashed size={14} className="text-muted-foreground" />
+                          <span className="flex-1">{t('transactions.onlyUnpaid')}</span>
+                          {filterUnpaid && <Check size={13} className="text-primary" />}
+                        </DropdownMenuItem>
+
                         {/* Ignored rows: a visibility switch rather than a filter
                     value, so it reads as one line instead of a submenu. */}
                         <DropdownMenuItem
@@ -924,6 +961,23 @@ export function TransactionsFilterBar({
                             </DropdownMenuSubContent>
                           </DropdownMenuPortal>
                         </DropdownMenuSub>
+
+                        {/* Review queue of issue #636: same shape as the ignored
+                    switch, a reading mode rather than a filter value. The
+                    calendar view does not apply it, so it does not offer it. */}
+                        {showUnreadFilter && (
+                          <DropdownMenuItem
+                            onSelect={(e) => {
+                              e.preventDefault()
+                              onOnlyUnreadChange(!onlyUnread)
+                            }}
+                            className="gap-2 text-[13px]"
+                          >
+                            <Inbox size={14} className="text-muted-foreground" />
+                            <span className="flex-1">{t('transactions.onlyUnread')}</span>
+                            {onlyUnread && <Check size={13} className="text-primary" />}
+                          </DropdownMenuItem>
+                        )}
 
                         {/* Date range submenu with presets */}
                         <DropdownMenuSub>
@@ -1093,7 +1147,10 @@ export function TransactionsFilterBar({
               !!selectedPayee ||
               !!typeLabel ||
               !!statusLabel ||
+              filterUnpaid ||
+              hideIgnored ||
               !!flagLabel ||
+              (showUnreadFilter && onlyUnread) ||
               !!dateLabel ||
               !!amountLabel) && (
               <div className="flex flex-wrap items-center gap-1 border-t border-border/60 px-2 py-1.5">
@@ -1169,6 +1226,14 @@ export function TransactionsFilterBar({
                     onRemove={() => onStatusChange('')}
                   />
                 )}
+                {filterUnpaid && (
+                  <FilterChip
+                    icon={<CircleDashed size={12} />}
+                    label={t('transactions.onlyUnpaid')}
+                    value={t('transactions.unpaid')}
+                    onRemove={() => onUnpaidChange(false)}
+                  />
+                )}
                 {hideIgnored && (
                   <FilterChip
                     icon={<EyeClosed size={12} />}
@@ -1183,6 +1248,14 @@ export function TransactionsFilterBar({
                     label={t('transactions.flagged')}
                     value={flagLabel}
                     onRemove={() => onFlagFilterChange('')}
+                  />
+                )}
+                {showUnreadFilter && onlyUnread && (
+                  <FilterChip
+                    icon={<Inbox size={12} />}
+                    label={t('transactions.unreadRows')}
+                    value={t('transactions.onlyUnreadShort')}
+                    onRemove={() => onOnlyUnreadChange(false)}
                   />
                 )}
                 {dateLabel && (

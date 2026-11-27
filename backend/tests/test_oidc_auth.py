@@ -1,6 +1,8 @@
+import asyncio
 import base64
 import hashlib
 import json
+import logging
 from urllib.parse import parse_qs, urlparse
 
 import pytest
@@ -11,7 +13,12 @@ from sqlalchemy import select
 from app.api import oidc_auth
 from app.core.config import get_settings
 from app.models.app_settings import AppSetting
+from app.models.user import User
 from app.models.workspace import WorkspaceMember
+
+# The oidc_settings fixture replaces _discover; tests that need the real one
+# put this back.
+_real_discover = oidc_auth._discover
 
 
 class FakeRedis:
@@ -142,7 +149,27 @@ async def test_oidc_config_exposes_local_auth_disabled(client: AsyncClient, clea
 
 
 @pytest.mark.asyncio
-async def test_oidc_config_exposes_the_provider_logout_url(
+async def test_oidc_config_never_reaches_the_provider(
+    client: AsyncClient, clean_db, oidc_settings, monkeypatch
+):
+    """The sign-in page blocks on /config; it must not wait on the provider."""
+
+    async def fail_discover():
+        raise AssertionError("/config must not read the discovery document")
+
+    monkeypatch.setattr(oidc_auth, "_discover", fail_discover)
+    monkeypatch.setattr(oidc_auth, "_logout_url_cache", None)
+
+    response = await client.get("/api/auth/oidc/config")
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["enabled"] is True
+    assert "logout_url" not in data
+
+
+@pytest.mark.asyncio
+async def test_oidc_logout_url_comes_from_the_discovery_document(
     client: AsyncClient, clean_db, oidc_settings, monkeypatch
 ):
     """Signing out must be able to end the provider's session too (#1623)."""
@@ -153,16 +180,14 @@ async def test_oidc_config_exposes_the_provider_logout_url(
     monkeypatch.setattr(oidc_auth, "_discover", fake_discover)
     monkeypatch.setattr(oidc_auth, "_logout_url_cache", None)
 
-    response = await client.get("/api/auth/oidc/config")
+    response = await client.get("/api/auth/oidc/logout-url")
 
     assert response.status_code == 200
-    data = response.json()
-    assert data["enabled"] is True
-    assert data["logout_url"] == "https://id.example.com/logout?client_id=securo"
+    assert response.json()["logout_url"] == "https://id.example.com/logout?client_id=securo"
 
 
 @pytest.mark.asyncio
-async def test_oidc_config_prefers_the_configured_logout_url(
+async def test_oidc_logout_url_prefers_the_configured_one(
     client: AsyncClient, clean_db, oidc_settings, monkeypatch
 ):
     oidc_settings.oidc_logout_url = "https://sso.example.com/logout?client_id=other"
@@ -173,14 +198,35 @@ async def test_oidc_config_prefers_the_configured_logout_url(
     monkeypatch.setattr(oidc_auth, "_discover", fail_discover)
     monkeypatch.setattr(oidc_auth, "_logout_url_cache", None)
 
-    response = await client.get("/api/auth/oidc/config")
+    response = await client.get("/api/auth/oidc/logout-url")
 
     assert response.status_code == 200
     assert response.json()["logout_url"] == "https://sso.example.com/logout?client_id=other"
 
 
 @pytest.mark.asyncio
-async def test_oidc_config_has_no_logout_url_when_the_provider_lacks_one(
+async def test_oidc_logout_url_keeps_a_return_address_put_on_it(
+    client: AsyncClient, clean_db, oidc_settings, monkeypatch
+):
+    """An operator sends people back after provider sign-out by putting the
+    registered return address in OIDC_LOGOUT_URL (#1639)."""
+    oidc_settings.oidc_logout_url = (
+        "https://sso.example.com/logout"
+        "?post_logout_redirect_uri=https%3A%2F%2Fapp.example.com%2Flogin"
+    )
+    monkeypatch.setattr(oidc_auth, "_logout_url_cache", None)
+
+    response = await client.get("/api/auth/oidc/logout-url")
+
+    assert response.json()["logout_url"] == (
+        "https://sso.example.com/logout"
+        "?post_logout_redirect_uri=https%3A%2F%2Fapp.example.com%2Flogin"
+        "&client_id=securo"
+    )
+
+
+@pytest.mark.asyncio
+async def test_oidc_logout_url_is_empty_when_the_provider_lacks_one(
     client: AsyncClient, clean_db, oidc_settings, monkeypatch
 ):
     async def fake_discover():
@@ -189,17 +235,17 @@ async def test_oidc_config_has_no_logout_url_when_the_provider_lacks_one(
     monkeypatch.setattr(oidc_auth, "_discover", fake_discover)
     monkeypatch.setattr(oidc_auth, "_logout_url_cache", None)
 
-    response = await client.get("/api/auth/oidc/config")
+    response = await client.get("/api/auth/oidc/logout-url")
 
     assert response.status_code == 200
     assert response.json()["logout_url"] == ""
 
 
 @pytest.mark.asyncio
-async def test_oidc_config_keeps_working_when_discovery_is_down(
+async def test_oidc_logout_url_keeps_working_when_discovery_is_down(
     client: AsyncClient, clean_db, oidc_settings, monkeypatch
 ):
-    """The config decides how to sign in; a down provider must not break it."""
+    """The local sign-out stands even when the provider is unreachable."""
 
     async def failing_discover():
         raise oidc_auth.httpx.ConnectError("provider down")
@@ -207,30 +253,28 @@ async def test_oidc_config_keeps_working_when_discovery_is_down(
     monkeypatch.setattr(oidc_auth, "_discover", failing_discover)
     monkeypatch.setattr(oidc_auth, "_logout_url_cache", None)
 
-    response = await client.get("/api/auth/oidc/config")
-
-    assert response.status_code == 200
-    data = response.json()
-    assert data["enabled"] is True
-    assert data["logout_url"] == ""
-
-
-@pytest.mark.asyncio
-async def test_oidc_config_survives_a_malformed_configured_logout_url(
-    client: AsyncClient, clean_db, oidc_settings, monkeypatch
-):
-    """A broken OIDC_LOGOUT_URL must not take the whole config down (#1623)."""
-    oidc_settings.oidc_logout_url = "https://[broken"
-    monkeypatch.setattr(oidc_auth, "_logout_url_cache", None)
-
-    response = await client.get("/api/auth/oidc/config")
+    response = await client.get("/api/auth/oidc/logout-url")
 
     assert response.status_code == 200
     assert response.json()["logout_url"] == ""
 
 
 @pytest.mark.asyncio
-async def test_oidc_config_survives_a_malformed_end_session_endpoint(
+async def test_oidc_logout_url_survives_a_malformed_configured_url(
+    client: AsyncClient, clean_db, oidc_settings, monkeypatch
+):
+    """A broken OIDC_LOGOUT_URL must not turn the sign-out into a 500 (#1623)."""
+    oidc_settings.oidc_logout_url = "https://[broken"
+    monkeypatch.setattr(oidc_auth, "_logout_url_cache", None)
+
+    response = await client.get("/api/auth/oidc/logout-url")
+
+    assert response.status_code == 200
+    assert response.json()["logout_url"] == ""
+
+
+@pytest.mark.asyncio
+async def test_oidc_logout_url_survives_a_malformed_end_session_endpoint(
     client: AsyncClient, clean_db, oidc_settings, monkeypatch
 ):
     async def fake_discover():
@@ -239,14 +283,14 @@ async def test_oidc_config_survives_a_malformed_end_session_endpoint(
     monkeypatch.setattr(oidc_auth, "_discover", fake_discover)
     monkeypatch.setattr(oidc_auth, "_logout_url_cache", None)
 
-    response = await client.get("/api/auth/oidc/config")
+    response = await client.get("/api/auth/oidc/logout-url")
 
     assert response.status_code == 200
     assert response.json()["logout_url"] == ""
 
 
 @pytest.mark.asyncio
-async def test_oidc_config_ignores_a_discovery_document_that_is_not_an_object(
+async def test_oidc_logout_url_ignores_a_discovery_document_that_is_not_an_object(
     client: AsyncClient, clean_db, oidc_settings, monkeypatch
 ):
     async def fake_discover():
@@ -255,17 +299,17 @@ async def test_oidc_config_ignores_a_discovery_document_that_is_not_an_object(
     monkeypatch.setattr(oidc_auth, "_discover", fake_discover)
     monkeypatch.setattr(oidc_auth, "_logout_url_cache", None)
 
-    response = await client.get("/api/auth/oidc/config")
+    response = await client.get("/api/auth/oidc/logout-url")
 
     assert response.status_code == 200
     assert response.json()["logout_url"] == ""
 
 
 @pytest.mark.asyncio
-async def test_oidc_config_gives_up_on_a_slow_discovery(
+async def test_oidc_logout_url_gives_up_on_a_slow_discovery(
     client: AsyncClient, clean_db, oidc_settings, monkeypatch
 ):
-    """The frontend waits 5 s for /config; the discovery must not eat it all."""
+    """The browser waits on this answer; the discovery must not hold it."""
     import asyncio
 
     async def slow_discover():
@@ -276,15 +320,303 @@ async def test_oidc_config_gives_up_on_a_slow_discovery(
     monkeypatch.setattr(oidc_auth, "_logout_url_cache", None)
     monkeypatch.setattr(oidc_auth, "_LOGOUT_DISCOVERY_TIMEOUT", 0.05)
 
-    response = await client.get("/api/auth/oidc/config")
+    response = await client.get("/api/auth/oidc/logout-url")
 
     assert response.status_code == 200
     assert response.json()["logout_url"] == ""
 
 
+class FakeClock:
+    def __init__(self, start: float = 1000.0):
+        self.now = start
+
+    def __call__(self) -> float:
+        return self.now
+
+
 @pytest.mark.asyncio
-async def test_oidc_config_has_no_logout_url_when_oidc_is_off(client: AsyncClient, clean_db):
-    response = await client.get("/api/auth/oidc/config")
+async def test_oidc_logout_url_retries_the_discovery_soon_after_a_failure(
+    client: AsyncClient, clean_db, oidc_settings, monkeypatch
+):
+    """One discovery hiccup must not disable provider sign-out for minutes
+    (#1639): a failed lookup is remembered for seconds, not the long TTL."""
+    clock = FakeClock()
+    calls = []
+
+    async def flaky_discover():
+        calls.append(clock.now)
+        if len(calls) == 1:
+            raise oidc_auth.httpx.ConnectError("provider hiccup")
+        return {"end_session_endpoint": "https://id.example.com/logout"}
+
+    monkeypatch.setattr(oidc_auth, "_discover", flaky_discover)
+    monkeypatch.setattr(oidc_auth, "_logout_url_cache", None)
+    monkeypatch.setattr(oidc_auth.time, "monotonic", clock)
+
+    response = await client.get("/api/auth/oidc/logout-url")
+    assert response.json()["logout_url"] == ""
+    assert len(calls) == 1
+
+    clock.now += 10
+    response = await client.get("/api/auth/oidc/logout-url")
+    assert response.json()["logout_url"] == ""
+    assert len(calls) == 1, "a burst of sign-outs must not hammer a provider that is down"
+
+    clock.now += 31
+    response = await client.get("/api/auth/oidc/logout-url")
+    assert response.json()["logout_url"] == "https://id.example.com/logout?client_id=securo"
+    assert len(calls) == 2
+
+
+@pytest.mark.asyncio
+async def test_oidc_logout_url_keeps_a_resolved_answer_cached(
+    client: AsyncClient, clean_db, oidc_settings, monkeypatch
+):
+    """The long TTL still applies when the discovery answers (#1639)."""
+    clock = FakeClock()
+    calls = []
+
+    async def counting_discover():
+        calls.append(clock.now)
+        return {"end_session_endpoint": "https://id.example.com/logout"}
+
+    monkeypatch.setattr(oidc_auth, "_discover", counting_discover)
+    monkeypatch.setattr(oidc_auth, "_logout_url_cache", None)
+    monkeypatch.setattr(oidc_auth.time, "monotonic", clock)
+
+    response = await client.get("/api/auth/oidc/logout-url")
+    assert response.json()["logout_url"] == "https://id.example.com/logout?client_id=securo"
+
+    clock.now += oidc_auth._LOGOUT_URL_TTL - 1
+    response = await client.get("/api/auth/oidc/logout-url")
+    assert response.json()["logout_url"] == "https://id.example.com/logout?client_id=securo"
+    assert len(calls) == 1
+
+    clock.now += 2
+    response = await client.get("/api/auth/oidc/logout-url")
+    assert response.json()["logout_url"] == "https://id.example.com/logout?client_id=securo"
+    assert len(calls) == 2
+
+
+@pytest.mark.asyncio
+async def test_oidc_logout_url_does_not_retry_a_provider_without_logout_often(
+    client: AsyncClient, clean_db, oidc_settings, monkeypatch
+):
+    """A discovery document with no end_session_endpoint is a valid answer, so
+    it keeps the long TTL instead of being retried like a failure (#1639)."""
+    clock = FakeClock()
+    calls = []
+
+    async def counting_discover():
+        calls.append(clock.now)
+        return {"authorization_endpoint": "https://id.example.com/authorize"}
+
+    monkeypatch.setattr(oidc_auth, "_discover", counting_discover)
+    monkeypatch.setattr(oidc_auth, "_logout_url_cache", None)
+    monkeypatch.setattr(oidc_auth.time, "monotonic", clock)
+
+    response = await client.get("/api/auth/oidc/logout-url")
+    assert response.json()["logout_url"] == ""
+
+    clock.now += 60
+    response = await client.get("/api/auth/oidc/logout-url")
+    assert response.json()["logout_url"] == ""
+    assert len(calls) == 1
+
+
+def _oidc_warnings(caplog) -> list[logging.LogRecord]:
+    return [r for r in caplog.records if r.name == "app.api.oidc_auth"]
+
+
+@pytest.mark.asyncio
+async def test_logout_discovery_failure_logs_once_per_cache_window(
+    oidc_settings, monkeypatch, caplog
+):
+    """A failing discovery turns SSO sign-out off; `/config` is public, so the
+    warning is written once, where the failure is cached."""
+    calls = 0
+
+    async def failing_discover():
+        nonlocal calls
+        calls += 1
+        raise oidc_auth.httpx.ConnectError("provider down")
+
+    monkeypatch.setattr(oidc_auth, "_discover", failing_discover)
+    monkeypatch.setattr(oidc_auth, "_logout_url_cache", None)
+    caplog.set_level(logging.WARNING, logger="app.api.oidc_auth")
+
+    assert await oidc_auth._provider_logout_url() == ""
+
+    warnings = _oidc_warnings(caplog)
+    assert len(warnings) == 1
+    message = warnings[0].getMessage()
+    assert oidc_settings.oidc_discovery_url in message
+    assert "provider down" in message
+
+    caplog.clear()
+
+    # Inside the window: same empty answer, no second line, no second read.
+    assert await oidc_auth._provider_logout_url() == ""
+    assert _oidc_warnings(caplog) == []
+    assert calls == 1
+
+
+@pytest.mark.asyncio
+async def test_logout_discovery_warning_hides_url_credentials(
+    oidc_settings, monkeypatch, caplog
+):
+    """A credential in the discovery URL's userinfo or query never reaches the
+    log, not even quoted back by the httpx error; discovery still reads the
+    configured URL as it is."""
+    secret_url = (
+        "https://user:hunter2@id.example.com/.well-known/openid-configuration"
+        "?token=s3cr3t-token"
+    )
+    oidc_settings.oidc_discovery_url = secret_url
+    seen: list[str] = []
+
+    async def failing_discover():
+        seen.append(oidc_auth.get_settings().oidc_discovery_url)
+        raise oidc_auth.httpx.ConnectError(f"cannot reach {secret_url}")
+
+    monkeypatch.setattr(oidc_auth, "_discover", failing_discover)
+    monkeypatch.setattr(oidc_auth, "_logout_url_cache", None)
+    caplog.set_level(logging.WARNING, logger="app.api.oidc_auth")
+
+    assert await oidc_auth._provider_logout_url() == ""
+
+    assert seen == [secret_url]
+    warnings = _oidc_warnings(caplog)
+    assert len(warnings) == 1
+    message = warnings[0].getMessage()
+    assert "https://id.example.com/.well-known/openid-configuration" in message
+    assert "hunter2" not in message
+    assert "user:" not in message
+    assert "s3cr3t-token" not in message
+
+
+@pytest.mark.asyncio
+async def test_logout_discovery_survives_an_unparsable_discovery_url(
+    oidc_settings, monkeypatch, caplog
+):
+    """httpx.InvalidURL is neither an HTTPError nor a ValueError; it still
+    answers "" and is reported like any other discovery failure."""
+    oidc_settings.oidc_discovery_url = "https://[::1/.well-known/openid-configuration"
+    monkeypatch.setattr(oidc_auth, "_discover", _real_discover)
+    monkeypatch.setattr(oidc_auth, "_logout_url_cache", None)
+    caplog.set_level(logging.WARNING, logger="app.api.oidc_auth")
+
+    assert await oidc_auth._provider_logout_url() == ""
+
+    warnings = _oidc_warnings(caplog)
+    assert len(warnings) == 1
+    assert "InvalidURL" in warnings[0].getMessage()
+
+
+@pytest.mark.asyncio
+async def test_logout_discovery_survives_an_out_of_range_port(
+    oidc_settings, monkeypatch, caplog
+):
+    """On Linux a port such as :99999 fails inside the connect as an
+    ExceptionGroup wrapping OverflowError."""
+
+    async def failing_discover():
+        raise ExceptionGroup(
+            "connection failed", [OverflowError("port must be 0-65535.")]
+        )
+
+    monkeypatch.setattr(oidc_auth, "_discover", failing_discover)
+    monkeypatch.setattr(oidc_auth, "_logout_url_cache", None)
+    caplog.set_level(logging.WARNING, logger="app.api.oidc_auth")
+
+    assert await oidc_auth._provider_logout_url() == ""
+
+    assert len(_oidc_warnings(caplog)) == 1
+
+
+def test_loggable_url_keeps_port_and_handles_broken_urls():
+    assert (
+        oidc_auth._loggable_url("http://u:p@idp.local:8443/realms/x?k=v#frag")
+        == "http://idp.local:8443/realms/x"
+    )
+    assert oidc_auth._loggable_url("https://[broken") == "<unparsable discovery URL>"
+
+
+@pytest.mark.asyncio
+async def test_logout_discovery_timeout_is_reported(oidc_settings, monkeypatch, caplog):
+    async def slow_discover():
+        await asyncio.sleep(30)
+        return {"end_session_endpoint": "https://id.example.com/logout"}
+
+    monkeypatch.setattr(oidc_auth, "_discover", slow_discover)
+    monkeypatch.setattr(oidc_auth, "_logout_url_cache", None)
+    monkeypatch.setattr(oidc_auth, "_LOGOUT_DISCOVERY_TIMEOUT", 0.05)
+    caplog.set_level(logging.WARNING, logger="app.api.oidc_auth")
+
+    assert await oidc_auth._provider_logout_url() == ""
+
+    warnings = _oidc_warnings(caplog)
+    assert len(warnings) == 1
+    assert "timed out" in warnings[0].getMessage()
+
+
+@pytest.mark.asyncio
+async def test_logout_discovery_http_error_is_reported(oidc_settings, monkeypatch, caplog):
+    request = oidc_auth.httpx.Request("GET", oidc_settings.oidc_discovery_url)
+    response = oidc_auth.httpx.Response(503, request=request)
+
+    async def failing_discover():
+        raise oidc_auth.httpx.HTTPStatusError(
+            "service unavailable", request=request, response=response
+        )
+
+    monkeypatch.setattr(oidc_auth, "_discover", failing_discover)
+    monkeypatch.setattr(oidc_auth, "_logout_url_cache", None)
+    caplog.set_level(logging.WARNING, logger="app.api.oidc_auth")
+
+    assert await oidc_auth._provider_logout_url() == ""
+
+    warnings = _oidc_warnings(caplog)
+    assert len(warnings) == 1
+    assert "HTTP 503" in warnings[0].getMessage()
+
+
+@pytest.mark.asyncio
+async def test_logout_discovery_bad_end_session_url_is_reported(
+    oidc_settings, monkeypatch, caplog
+):
+    async def fake_discover():
+        return {"end_session_endpoint": "https://[broken"}
+
+    monkeypatch.setattr(oidc_auth, "_discover", fake_discover)
+    monkeypatch.setattr(oidc_auth, "_logout_url_cache", None)
+    caplog.set_level(logging.WARNING, logger="app.api.oidc_auth")
+
+    assert await oidc_auth._provider_logout_url() == ""
+
+    warnings = _oidc_warnings(caplog)
+    assert len(warnings) == 1
+    assert "not a usable URL" in warnings[0].getMessage()
+
+
+@pytest.mark.asyncio
+async def test_successful_logout_discovery_logs_nothing(oidc_settings, monkeypatch, caplog):
+    async def fake_discover():
+        return {"end_session_endpoint": "https://id.example.com/logout"}
+
+    monkeypatch.setattr(oidc_auth, "_discover", fake_discover)
+    monkeypatch.setattr(oidc_auth, "_logout_url_cache", None)
+    caplog.set_level(logging.WARNING, logger="app.api.oidc_auth")
+
+    url = await oidc_auth._provider_logout_url()
+
+    assert url == "https://id.example.com/logout?client_id=securo"
+    assert _oidc_warnings(caplog) == []
+
+
+@pytest.mark.asyncio
+async def test_oidc_logout_url_is_empty_when_oidc_is_off(client: AsyncClient, clean_db):
+    response = await client.get("/api/auth/oidc/logout-url")
 
     assert response.status_code == 200
     assert response.json()["logout_url"] == ""
@@ -665,6 +997,132 @@ async def test_oidc_callback_verified_email_link_mode_links_existing_user(
     await session.refresh(test_user)
     assert test_user.oidc_issuer == "https://id.example.com"
     assert test_user.oidc_subject == "linked-sub"
+
+
+PAIR_ADDRESS = "pair@example.com"
+PAIR_OTHER_CASE = "Pair@example.com"
+
+
+async def _pair_of_accounts(session) -> tuple[User, User]:
+    """Two accounts for one mailbox in different case, as an older release
+    left them: the column's unique index is case-sensitive (#568).
+
+    The row written in the lower-case spelling is given the higher id, so an
+    ordering by id alone would choose the other one: only the exact spelling
+    can make the lower-case row the answer.
+    """
+    import uuid as _uuid
+
+    pair = []
+    for address, account_id in (
+        (PAIR_ADDRESS, _uuid.UUID(int=2)),
+        (PAIR_OTHER_CASE, _uuid.UUID(int=1)),
+    ):
+        user = User(
+            id=account_id,
+            email=address,
+            hashed_password="synthetic-unused",
+            is_active=True,
+            is_superuser=False,
+            is_verified=True,
+        )
+        session.add(user)
+        pair.append(user)
+    await session.commit()
+    for user in pair:
+        await session.refresh(user)
+    return pair[0], pair[1]
+
+
+def _fake_provider(monkeypatch, *, email: str, subject: str = "shared-sub") -> FakeRedis:
+    """The provider answering with one identity, without the network."""
+    fake_redis = FakeRedis()
+
+    async def fake_discover():
+        return {"issuer": "https://id.example.com"}
+
+    async def fake_exchange(discovery, code, code_verifier=""):
+        return {"id_token": "id-token", "access_token": "provider-token"}
+
+    async def fake_decode(discovery, id_token, nonce, access_token=""):
+        return {"sub": subject, "email": email, "email_verified": True}
+
+    async def fake_userinfo(discovery, access_token):
+        return {}
+
+    async def fake_get_redis():
+        return fake_redis
+
+    monkeypatch.setattr(oidc_auth, "get_redis", fake_get_redis)
+    monkeypatch.setattr(oidc_auth, "_discover", fake_discover)
+    monkeypatch.setattr(oidc_auth, "_exchange_code", fake_exchange)
+    monkeypatch.setattr(oidc_auth, "_decode_id_token", fake_decode)
+    monkeypatch.setattr(oidc_auth, "_fetch_userinfo", fake_userinfo)
+    return fake_redis
+
+
+@pytest.mark.parametrize(
+    ("link_mode", "expected_status"),
+    [("disabled", 403), ("verified_email", 307), ("email", 307)],
+)
+@pytest.mark.parametrize("provider_email", [PAIR_ADDRESS, PAIR_OTHER_CASE])
+@pytest.mark.asyncio
+async def test_oidc_callback_resolves_an_address_shared_by_two_accounts(
+    client: AsyncClient,
+    session,
+    clean_db,
+    oidc_settings,
+    monkeypatch,
+    link_mode,
+    expected_status,
+    provider_email,
+):
+    """One address naming two accounts answers like any other account: never
+    a 500, in any of the three link modes, and the row written in the exact
+    spelling the provider sent is the one that gets linked (#568)."""
+    oidc_settings.oidc_existing_user_link_mode = link_mode
+    lower_row, upper_row = await _pair_of_accounts(session)
+    spelled = lower_row if provider_email == PAIR_ADDRESS else upper_row
+    other = upper_row if provider_email == PAIR_ADDRESS else lower_row
+    fake_redis = _fake_provider(monkeypatch, email=provider_email)
+    await fake_redis.set("oidc_state:state123", json.dumps({"nonce": "nonce123"}))
+
+    response = await client.get(
+        "/api/auth/oidc/callback?code=abc&state=state123", follow_redirects=False
+    )
+
+    assert response.status_code == expected_status, response.text
+    await session.refresh(spelled)
+    await session.refresh(other)
+    if expected_status == 307:
+        assert spelled.oidc_issuer == "https://id.example.com"
+        assert spelled.oidc_subject == "shared-sub"
+    else:
+        assert spelled.oidc_issuer is None
+    # The other spelling is left alone in every mode.
+    assert other.oidc_issuer is None
+    assert other.oidc_subject is None
+
+
+@pytest.mark.asyncio
+async def test_oidc_auto_registration_stores_the_address_in_lower_case(
+    client: AsyncClient, session, clean_db, oidc_settings, monkeypatch
+):
+    """The spelling the provider sent is only used to find an existing row:
+    an account created here is stored in lower case, so the new row never
+    arrives shouting (#568)."""
+    fake_redis = _fake_provider(monkeypatch, email=PAIR_OTHER_CASE, subject="new-sub")
+    await fake_redis.set("oidc_state:state123", json.dumps({"nonce": "nonce123"}))
+
+    response = await client.get(
+        "/api/auth/oidc/callback?code=abc&state=state123", follow_redirects=False
+    )
+
+    assert response.status_code == 307, response.text
+    registered = (
+        await session.execute(select(User).where(User.oidc_subject == "new-sub"))
+    ).scalar_one()
+    assert registered.email == PAIR_ADDRESS
 
 
 @pytest.mark.asyncio
