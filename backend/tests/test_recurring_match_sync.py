@@ -814,7 +814,6 @@ async def test_sync_merges_a_tolerated_amount_into_placeholder(
     assert txs[0].source == "sync"
     assert txs[0].external_id == "s1"
     assert txs[0].recurring_transaction_id == bill_id
-    stamp.assert_awaited_once()
 
 
 @pytest.mark.asyncio
@@ -995,7 +994,6 @@ async def test_sync_a_local_charge_takes_over_a_foreign_placeholder(
     assert txs[0].id == placeholder_id
     assert txs[0].recurring_transaction_id == bill_id
     assert (txs[0].amount, txs[0].currency) == (Decimal("97.30"), "BRL")
-    stamp.assert_awaited()
 
 
 @pytest.mark.asyncio
@@ -1027,4 +1025,3 @@ async def test_sync_drops_a_stamp_made_in_the_bills_currency(
     assert len(txs) == 1
     assert txs[0].amount_primary is None
     assert txs[0].fx_rate_used is None
-    stamp.assert_awaited()

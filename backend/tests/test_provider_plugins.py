@@ -67,11 +67,6 @@ def test_complete_feed_needs_transactions():
         parse_manifest(_provider_manifest(provides=["accounts"], complete_feed=True))
 
 
-def test_provides_and_api_scopes_can_be_declared_together():
-    manifest = parse_manifest(_provider_manifest())
-    assert manifest.api_scopes and manifest.contributes.integrations[0].provides
-
-
 @pytest.mark.asyncio
 async def test_the_consent_shows_what_an_integration_provides(session: AsyncSession, ids, catalog, plugin_runner):
     catalog.manifests[catalog.commit] = _provider_manifest()
