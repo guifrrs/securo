@@ -29,6 +29,7 @@ from app.services.balance_projection import (
 )
 from app.services.dashboard_service import _get_forecast_transactions
 from app.services.spending_plan_service import calendar_allowance
+from app.services.viewer_currency import ViewerCurrency, viewer_currency
 
 
 async def get_transaction_calendar(
@@ -62,6 +63,9 @@ async def get_transaction_calendar(
 
     user = await session.get(User, user_id)
     primary_currency = user.primary_currency if user else get_settings().default_currency
+    # Another member's row is stamped in their display currency; the day
+    # panel shows it in the viewer's, like the list (#269, #440).
+    viewer = await viewer_currency(session, primary_currency)
     accounting_mode = (
         await get_credit_card_accounting_mode(session)
         if date_basis == "reporting"
@@ -105,9 +109,7 @@ async def get_transaction_calendar(
         if activity_date not in days:
             continue
         day = days[activity_date]
-        amount_primary = await positive_primary_amount(
-            session, tx.amount, tx.currency, primary_currency, tx.amount_primary
-        )
+        amount_primary = await _viewer_primary_amount(session, viewer, tx, primary_currency)
 
         parts = _category_parts(tx)
         is_transfer = _is_transfer_item(tx, parts)
@@ -153,9 +155,7 @@ async def get_transaction_calendar(
         if activity_date not in days:
             continue
         day = days[activity_date]
-        amount_primary = await positive_primary_amount(
-            session, tx.amount, tx.currency, primary_currency, tx.amount_primary
-        )
+        amount_primary = await _viewer_primary_amount(session, viewer, tx, primary_currency)
         parts = _category_parts(tx)
         is_transfer = _is_transfer_item(tx, parts)
         ignored = is_ignored_row(tx)
@@ -426,4 +426,24 @@ def _forecast_item(
         is_ignored=ignored,
         has_category_lines=bool(tx.has_category_lines),
         exclude_from_pnl=bool(tx.exclude_from_pnl),
+    )
+
+
+async def _viewer_primary_amount(
+    session: AsyncSession, viewer: ViewerCurrency, tx: Transaction, primary_currency: str
+) -> float:
+    """A row's amount in the viewer's currency, as the list shows it.
+
+    Another member's stamp is converted from their currency (#269), and a
+    row already in the viewer's currency reads as its own amount (#463).
+    """
+    if viewer.stamp_currency(tx.user_id) != viewer.currency:
+        shown = await viewer.convert(
+            session, tx.user_id, tx.amount_primary, tx.date,
+            currency=tx.currency, amount=tx.amount,
+        )
+        if shown is not None:
+            return float(abs(shown))
+    return await positive_primary_amount(
+        session, tx.amount, tx.currency, primary_currency, tx.amount_primary
     )

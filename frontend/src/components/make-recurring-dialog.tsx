@@ -65,6 +65,7 @@ export function MakeRecurringDialog({
 
   const createMutation = useMutation({
     mutationFn: ({
+      id,
       data,
       sourceDate,
     }: {
@@ -75,6 +76,10 @@ export function MakeRecurringDialog({
     }) =>
       recurringApi.create({
         ...data,
+        // The bill is made from this transaction: the API links it back, so
+        // the row stops offering "make recurring" and a second attempt gets a
+        // clear conflict instead of a duplicate.
+        source_transaction_id: id,
         // The source transaction covers the start-date occurrence only while
         // the bill still starts on its own date: moving the start date makes
         // that first occurrence one no transaction covers, so it must happen.

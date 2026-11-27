@@ -197,20 +197,38 @@ async def test_list_users_pagination(session: AsyncSession, clean_db):
 # ---------------------------------------------------------------------------
 
 async def test_update_user_email(session: AsyncSession, clean_db):
+    """The administrator asks for the address; the owner applies it (ADR 0042).
+
+    The login address is a recovery credential, so it does not move here: the
+    request waits on the account for the person whose account it is.
+    """
     admin = await _make_user(session, "admin_upd@test.com", is_superuser=True)
     target = await _make_user(session, "target_upd@test.com")
-    data = AdminUserUpdate(email="newemail@test.com")
+    data = AdminUserUpdate(reason="Support ticket 12", email="newemail@test.com")
     result = await update_user(session, target.id, data, admin.id)
 
     assert result is not None
-    assert result.email == "newemail@test.com"
+    assert result.email == "target_upd@test.com"
+    assert result.pending_email == "newemail@test.com"
+
+
+async def test_update_user_never_touches_the_password(session: AsyncSession, clean_db):
+    """An administrator changes who can sign in, never how (ADR 0042)."""
+    admin = await _make_user(session, "admin_pw@test.com", is_superuser=True)
+    target = await _make_user(session, "target_pw@test.com")
+    old_hash = target.hashed_password
+    data = AdminUserUpdate(reason="Support ticket 12", preferences={"language": "pt-BR"})
+    result = await update_user(session, target.id, data, admin.id)
+
+    assert result is not None
+    assert result.hashed_password == old_hash
 
 
 async def test_update_user_preferences(session: AsyncSession, clean_db):
     admin = await _make_user(session, "admin_pref@test.com", is_superuser=True)
     target = await _make_user(session, "target_pref@test.com")
     new_prefs = {"language": "pt-BR", "currency_display": "BRL"}
-    data = AdminUserUpdate(preferences=new_prefs)
+    data = AdminUserUpdate(reason="Support ticket 12", preferences=new_prefs)
     result = await update_user(session, target.id, data, admin.id)
 
     assert result is not None
@@ -221,7 +239,7 @@ async def test_update_user_preferences(session: AsyncSession, clean_db):
 async def test_update_user_is_active_and_superuser(session: AsyncSession, clean_db):
     admin = await _make_user(session, "admin_flags@test.com", is_superuser=True)
     target = await _make_user(session, "target_flags@test.com")
-    data = AdminUserUpdate(is_active=False, is_superuser=True)
+    data = AdminUserUpdate(reason="Support ticket 12", is_active=False, is_superuser=True)
     result = await update_user(session, target.id, data, admin.id)
 
     assert result is not None
@@ -239,7 +257,7 @@ async def test_delete_user_cascade(session: AsyncSession, clean_db):
     target = await _make_user(session, "victim@test.com")
     await _populate_user_data(session, target)
 
-    result = await delete_user(session, target.id, admin.id)
+    result = await delete_user(session, target.id, admin.id, reason="Support ticket 12")
     assert result is True
 
     # Verify user is gone
@@ -286,7 +304,7 @@ async def test_delete_user_keeps_reconciliation_history(postgres_sessions):
         session.add_all([rule, suggestion, event])
         await session.commit()
 
-        assert await delete_user(session, target.id, admin.id) is True
+        assert await delete_user(session, target.id, admin.id, reason="Support ticket 12") is True
 
         for row in (rule, suggestion, event):
             await session.refresh(row)

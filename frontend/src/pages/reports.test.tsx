@@ -964,7 +964,14 @@ describe("Reports page: a plugin's report", () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Pet spending' }))
     expect(await screen.findByText('Vet')).toBeInTheDocument()
     // The default 1Y preset, sent as dates like every stepped window.
-    expect(api.reports.plugin).toHaveBeenCalledWith('maria/casa', 'pets', '2025-09-01', '2026-09-12', undefined)
+    expect(api.reports.plugin).toHaveBeenCalledWith(
+      'maria/casa',
+      'pets',
+      '2025-09-01',
+      '2026-09-12',
+      undefined,
+      'reports',
+    )
     expect(api.reports.netWorth).toHaveBeenCalledTimes(1)
   })
 
@@ -1011,7 +1018,14 @@ describe("Reports page: a plugin's report", () => {
     renderWithProviders(<ReportsPage />)
     fireEvent.click(await screen.findByRole('button', { name: 'Pet spending' }))
     await waitFor(() =>
-      expect(api.reports.plugin).toHaveBeenCalledWith('maria/casa', 'pets', '2024-09-11', '2026-09-12', undefined),
+      expect(api.reports.plugin).toHaveBeenCalledWith(
+        'maria/casa',
+        'pets',
+        '2024-09-11',
+        '2026-09-12',
+        undefined,
+        'reports',
+      ),
     )
     expect(
       await screen.findByText(
@@ -1032,7 +1046,14 @@ describe("Reports page: a plugin's report", () => {
     await user.click(screen.getByRole('button', { name: t('reports.range2y') }))
     // The preset's own window is 2024-09-01 through today (741 days).
     await waitFor(() =>
-      expect(api.reports.plugin).toHaveBeenLastCalledWith('maria/casa', 'pets', '2024-09-11', '2026-09-12', undefined),
+      expect(api.reports.plugin).toHaveBeenLastCalledWith(
+        'maria/casa',
+        'pets',
+        '2024-09-11',
+        '2026-09-12',
+        undefined,
+        'reports',
+      ),
     )
   })
 

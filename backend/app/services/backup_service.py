@@ -78,7 +78,12 @@ from app.schemas.backup import (
     BackupRestoreResult,
 )
 
-FORMAT_VERSION = "1.1"
+FORMAT_VERSION = "1.2"
+# 1.2 is the first format whose budgets carry the currency their limit was
+# typed in. Until then `budgets.currency` held migration 017's default ('BRL')
+# whatever the owner used, and the limit was read as a bare number, so an older
+# archive has to be stamped with the owner's display currency on the way in.
+BUDGET_CURRENCY_FORMAT_VERSION = "1.2"
 BACKUP_PREFIX = "securo-backup"
 CONFIG_KEY_PREFIX = "backup:"
 CONFIG_KEY_SUFFIX = ":config"
@@ -342,11 +347,16 @@ EXCLUDED_WORKSPACE_TABLES: dict[str, str] = {
     "agents": "AI agent setup of the optional agents module, tied to its provider",
     "agent_conversations": "chat history with AI agents",
     "bank_connections": "provider secrets and bank sessions",
+    "document_extractions": "what a model read from an uploaded document; the transactions it became are backed up",
+    "workspace_document_ai_settings": "which agents LLM connection reads documents; connections are not backed up either",
     "plugin_connections": "plugin secrets",
     "workspace_members": "membership is managed per instance",
     "workspace_plugins": "install state tied to the plugin runtime",
     "ui_layouts": "per-user screen layout",
     "spending_plans": "fork daily plan settings; its account ids sit inside JSON a restore cannot remap",
+    "notifications": "derived from the workspace's state; recreated by the next evaluation",
+    "notification_preferences": "per-user preference",
+    "notification_deliveries": "messages already sent, or about to be, about this instance's state",
 }
 
 
@@ -556,6 +566,19 @@ async def get_backup_config(session: AsyncSession, workspace_id: uuid.UUID) -> B
     return cfg
 
 
+async def _locked_config(
+    session: AsyncSession, workspace_id: uuid.UUID
+) -> tuple[BackupConfig, AppSetting | None]:
+    """The stored settings as they are now, locked until the next commit.
+
+    The person, a backup that worked and one that failed all write the same
+    value whole, so each starts from the last one committed."""
+    setting = await session.get(
+        AppSetting, _config_key(workspace_id), populate_existing=True, with_for_update=True
+    )
+    return await get_backup_config(session, workspace_id), setting
+
+
 async def save_backup_config(
     session: AsyncSession,
     workspace_id: uuid.UUID,
@@ -569,7 +592,7 @@ async def save_backup_config(
                 "Enable persistence.backups.enabled for Helm deployments."
             ),
         )
-    current = await get_backup_config(session, workspace_id)
+    current, setting = await _locked_config(session, workspace_id)
     data = current.model_dump(mode="json", exclude={"storage_shared"})
     data.update(
         {
@@ -581,7 +604,6 @@ async def save_backup_config(
     cfg = BackupConfig(**data)
     cfg.storage_shared = get_settings().backup_storage_shared
     cfg.next_run_at = _next_run(cfg.last_run_at, cfg.schedule)
-    setting = await session.get(AppSetting, _config_key(workspace_id))
     value = cfg.model_dump_json(exclude={"next_run_at", "storage_shared"})
     if setting is None:
         setting = AppSetting(key=_config_key(workspace_id), value=value)
@@ -592,9 +614,52 @@ async def save_backup_config(
     return cfg
 
 
+async def _reconciliation_rows_in_export(
+    session: AsyncSession, name: str, workspace_id: uuid.UUID
+) -> list[dict[str, Any]]:
+    """Reconciliation rows whose expectation is also part of the export.
+
+    A suggestion or event may outlive the transaction, invoice or recurring
+    bill it points at. Exporting the orphan makes the archive un-restorable:
+    restore cannot remap a reference to a row the archive does not contain.
+    """
+
+    model = MODEL_SPECS[name].model
+    assert model is not None
+    dynamic_model: Any = model
+    result = await session.execute(
+        select(dynamic_model).where(dynamic_model.workspace_id == workspace_id)
+    )
+    rows = [_serialize_model(row) for row in result.scalars().all()]
+    exported_ids: dict[str, set[str]] = {}
+    for table, target_model in (
+        ("transactions", Transaction),
+        ("invoices", Invoice),
+        ("recurring_transactions", RecurringTransaction),
+    ):
+        target_result = await session.execute(
+            select(target_model.id).where(target_model.workspace_id == workspace_id)
+        )
+        exported_ids[table] = {str(value) for value in target_result.scalars()}
+    def keep(row: dict[str, Any]) -> bool:
+        target_table = POLYMORPHIC_EXPECTATION_TABLES.get(str(row.get("expectation_kind")))
+        if target_table in exported_ids and str(row.get("expectation_id")) in exported_ids[
+            target_table
+        ]:
+            return True
+        # History deliberately survives a deleted target. Restore swaps the
+        # reference for a stable opaque id, so only an open suggestion needs a
+        # live target to be useful.
+        return name == "reconciliation_events" or row.get("status") != "pending"
+
+    return [row for row in rows if keep(row)]
+
+
 async def _fetch_entity_rows(
     session: AsyncSession, name: str, workspace_id: uuid.UUID
 ) -> list[dict[str, Any]]:
+    if name in {"reconciliation_suggestions", "reconciliation_events"}:
+        return await _reconciliation_rows_in_export(session, name, workspace_id)
     if name == "asset_values":
         result = await session.execute(
             select(AssetValue)
@@ -720,6 +785,41 @@ async def build_backup_zip(
         zf.writestr("metadata.json", json.dumps(metadata, indent=2, ensure_ascii=False))
 
     return buf.getvalue()
+
+
+def _format_version_tuple(value: Any) -> tuple[int, ...]:
+    """Split a backup format version into numbers, for comparing two of them.
+
+    An archive whose version cannot be read is treated as the oldest one: it
+    cannot be newer than the code reading it, so it gets the same treatment as
+    a backup written before the version was recorded.
+    """
+    numbers: list[int] = []
+    for part in str(value or "").split("."):
+        try:
+            numbers.append(int(part))
+        except ValueError:
+            return (0,)
+    return tuple(numbers) or (0,)
+
+
+async def _display_currency_of(
+    session: AsyncSession,
+    user_id: Any,
+    cache: dict[str, str],
+) -> str:
+    """The currency a person sees their money in, cached for one restore."""
+    key = str(user_id)
+    if key not in cache:
+        # The User import lives in the restore path; keep it local so the
+        # module's import graph stays free of the auth model.
+        from app.models.user import User
+
+        user = await session.get(User, uuid.UUID(key))
+        cache[key] = (
+            user.primary_currency if user is not None else get_settings().default_currency
+        )
+    return cache[key]
 
 
 def _metadata_from_zip(zf: zipfile.ZipFile) -> tuple[dict[str, Any], list[str]]:
@@ -933,8 +1033,10 @@ async def create_stored_backup(
     await asyncio.to_thread(path.write_bytes, data)
 
     if update_schedule:
+        # Read again: building the archive takes a while, and the settings may have changed.
+        config, setting = await _locked_config(session, workspace.id)
         config.last_run_at = _now()
-        setting = await session.get(AppSetting, _config_key(workspace.id))
+        config.last_failure_at = None
         if setting is None:
             setting = AppSetting(
                 key=_config_key(workspace.id),
@@ -1177,13 +1279,15 @@ def _rewrite_polymorphic_reference(
         return source_id
 
     # Reconciliation history deliberately survives deletion of its expectation.
-    # Pending suggestions still require a live target; completed suggestions and
-    # events receive a stable opaque replacement instead of retaining a UUID that
+    # A pending suggestion cannot be acted on without one, so it is expired. Every
+    # row receives a stable opaque replacement instead of retaining a UUID that
     # could resolve to another workspace's row.
     if model is ReconciliationSuggestion and row.get("status") == "pending":
-        raise ValueError(
-            f"{model.__table__.name}.{column.key} references a record outside the target workspace"
-        )
+        # A pending match whose target is not part of the export can no longer
+        # be acted on. Expire it and keep a stable opaque reference instead of
+        # failing the whole restore: older backups carry these orphans because
+        # the target transaction, invoice or recurring bill was deleted.
+        row["status"] = "expired"
     opaque_key = (target_table, source_id)
     return id_maps.opaque_references.setdefault(opaque_key, str(uuid.uuid4()))
 
@@ -1310,11 +1414,21 @@ def _prepare_model_data(
             rewritten = None
         data[key] = _deserialize_column(column, rewritten)
 
+    if model is ReconciliationSuggestion and row.get("status") is not None:
+        # _rewrite_polymorphic_reference expires a pending suggestion whose target
+        # is missing, and that runs when the loop above reaches expectation_id.
+        # The archive decides whether status was already read by then, so take it
+        # from the row once more, after every column has been visited.
+        data["status"] = _deserialize_column(columns["status"], row["status"])
     if model is Transaction and "amount_account" not in row:
         # A backup from before ADR 0027 has no account-currency amount; it is
         # filled the way migration 124 fills it. Same-currency rows never read
         # the column, so they can carry the copy harmlessly.
         data["amount_account"], data["amount_account_source"] = _legacy_account_amount(data)
+    if model is ImportLog and "ofx_utc_dates" not in row:
+        # A backup from before migration 125 was written by the old OFX
+        # parser, so its OFX imports are marked the way the migration marks them.
+        data["ofx_utc_dates"] = str(data.get("format") or "").lower() == "ofx"
     if "workspace_id" in columns:
         data["workspace_id"] = target_workspace_id
     if "user_id" in columns:
@@ -1744,6 +1858,9 @@ async def restore_backup_bytes(
     try:
         with zipfile.ZipFile(io.BytesIO(data)) as zf:
             metadata, _ = _metadata_from_zip(zf)
+            legacy_budget_currency = _format_version_tuple(
+                metadata.get("format_version")
+            ) < _format_version_tuple(BUDGET_CURRENCY_FORMAT_VERSION)
             names = _archive_entity_names(zf, selected_names)
             missing_names = [name for name in selected_names if name not in names]
             if missing_names:
@@ -1800,6 +1917,7 @@ async def restore_backup_bytes(
                 )
 
             uploaded_logo_ids: set[str] = set()
+            currency_cache: dict[str, str] = {}
             collapsed_scope_keys: dict[str, set[tuple[Any, ...]]] = {}
             renamed_user_scoped_entities: set[str] = set()
             for name in RESTORE_ORDER:
@@ -2012,6 +2130,18 @@ async def restore_backup_bytes(
                         owned_reference_ids=reference_scope,
                         workspace_user_ids=workspace_user_ids,
                     )
+                    if model is Budget and legacy_budget_currency:
+                        # An older archive carries the stale column default
+                        # whatever its owner used, and the limit was read as a
+                        # bare number in the viewer's currency. Give the row
+                        # its owner's display currency, the same rule migration
+                        # 125 applied, instead of restoring a limit labeled in
+                        # a currency nobody typed it in.
+                        prepared["currency"] = await _display_currency_of(
+                            session,
+                            prepared.get("user_id"),
+                            currency_cache,
+                        )
                     if model is Rule:
                         await rule_service.validate_rule_definition(
                             session,
@@ -2067,6 +2197,24 @@ async def restore_backup_bytes(
         raise HTTPException(status_code=400, detail=f"Could not restore backup: {exc}")
 
 
+async def _record_scheduled_failure(
+    session: AsyncSession, workspace_id: uuid.UUID, started_at: datetime
+) -> None:
+    """Keep that a scheduled backup failed, until one works (ADR 0041)."""
+    try:
+        config, setting = await _locked_config(session, workspace_id)
+        # Either a backup worked meanwhile, or only the clean-up after this one failed.
+        if setting is None or (config.last_run_at is not None and config.last_run_at >= started_at):
+            await session.rollback()
+            return
+        config.last_failure_at = _now()
+        setting.value = config.model_dump_json(exclude={"next_run_at", "storage_shared"})
+        await session.commit()
+    except Exception:
+        await session.rollback()
+        logger.exception("Could not record the failed backup of workspace %s", workspace_id)
+
+
 async def run_scheduled_backups(session: AsyncSession) -> dict[str, Any]:
     if not get_settings().backup_storage_shared:
         return {"created": 0, "skipped": 0, "errors": []}
@@ -2079,6 +2227,8 @@ async def run_scheduled_backups(session: AsyncSession) -> dict[str, Any]:
     skipped = 0
     errors: list[str] = []
     for setting_key in setting_keys:
+        workspace_id: uuid.UUID | None = None
+        started_at = _now()
         try:
             workspace_id = uuid.UUID(
                 setting_key.removeprefix(CONFIG_KEY_PREFIX).removesuffix(CONFIG_KEY_SUFFIX)
@@ -2102,4 +2252,6 @@ async def run_scheduled_backups(session: AsyncSession) -> dict[str, Any]:
         except Exception as exc:
             await session.rollback()
             errors.append(str(exc))
+            if workspace_id is not None:
+                await _record_scheduled_failure(session, workspace_id, started_at)
     return {"created": created, "skipped": skipped, "errors": errors}

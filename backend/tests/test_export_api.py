@@ -17,6 +17,7 @@ from app.models.category import Category
 from app.models.rule import Rule
 from app.models.transaction import Transaction
 from app.models.user import User
+from app.services import backup_service
 
 
 @pytest.mark.asyncio
@@ -39,7 +40,7 @@ async def test_backup_empty(client: AsyncClient, auth_headers):
         assert "transactions.json" in names
 
         metadata = json.loads(zf.read("metadata.json"))
-        assert metadata["format_version"] == "1.1"
+        assert metadata["format_version"] == backup_service.FORMAT_VERSION
         assert metadata["content"] == "both"
         for count in metadata["entity_counts"].values():
             assert count == 0
@@ -140,7 +141,7 @@ async def test_backup_post_without_password_is_a_plain_zip(client: AsyncClient, 
 
     with zipfile.ZipFile(io.BytesIO(resp.content)) as zf:
         assert "metadata.json" in zf.namelist()
-        assert json.loads(zf.read("metadata.json"))["format_version"] == "1.1"
+        assert json.loads(zf.read("metadata.json"))["format_version"] == backup_service.FORMAT_VERSION
 
 
 @pytest.mark.asyncio
